@@ -1,0 +1,2042 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BRUME — Les échecs dans le brouillard</title>
+<style>
+  :root{
+    --nuit:#0a1a20; --nuit2:#0d2430; --azur:#6ec8ff; --corail:#ff9166; --or:#ffc46b; --encre:#cfe0e6; --gris:#85a6b0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:linear-gradient(180deg,var(--nuit),var(--nuit2)); color:var(--encre); overflow:hidden; user-select:none;
+    font-family:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex; flex-direction:column;
+  }
+  header{
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+    padding:10px 20px 8px; border-bottom:1px solid rgba(255,196,107,.14);
+  }
+  .brand{display:flex; flex-direction:column; gap:1px; min-width:210px}
+  .brand h1{
+    font-family:Georgia,"Times New Roman",serif; font-weight:600; color:var(--or);
+    font-size:26px; letter-spacing:.42em; text-indent:.42em; line-height:1.05;
+  }
+  .brand p{font-size:11.5px; color:var(--gris); font-style:italic; letter-spacing:.06em}
+  #turnchip{
+    display:flex; align-items:center; gap:9px; margin:0 auto;
+    font-size:14px; letter-spacing:.05em; color:var(--encre);
+    background:rgba(22,50,60,.55); border:1px solid rgba(255,196,107,.22);
+    padding:6px 16px; border-radius:999px; white-space:nowrap;
+  }
+  #turnchip .pion{width:11px;height:11px;border-radius:50%;background:var(--or);
+    box-shadow:0 0 8px currentColor; flex:0 0 auto}
+  #turnchip.eclair{border-color:var(--or); box-shadow:0 0 16px rgba(255,196,107,.35); color:var(--or)}
+  .actions{display:flex; gap:10px}
+  button{
+    background:#12262e; color:var(--or); border:1px solid rgba(255,196,107,.45);
+    padding:7px 15px; border-radius:8px; font-size:13px; letter-spacing:.05em;
+    cursor:pointer; font-family:inherit; transition:background .15s, box-shadow .15s;
+  }
+  button:hover{background:#1e4250; box-shadow:0 0 12px rgba(255,196,107,.22)}
+  button:active{transform:translateY(1px)}
+  #eclairbar{
+    display:flex; justify-content:center; align-items:center; gap:8px;
+    padding:5px 10px 6px; font-size:12.5px; color:#8fb6bd; letter-spacing:.04em;
+  }
+  #eclairbar.actif{color:var(--or); text-shadow:0 0 10px rgba(255,196,107,.5)}
+  #eclair-ico{width:20px;height:20px;display:block}
+  main#board-wrap{flex:1; position:relative; min-height:0}
+  canvas#board{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:manipulation}
+  #toasts{
+    position:absolute; left:50%; bottom:26px; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:8px; align-items:center; z-index:40; pointer-events:none;
+  }
+  .toast{
+    background:rgba(10,26,32,.94); border:1px solid rgba(255,196,107,.42); color:var(--or);
+    padding:8px 18px; border-radius:999px; font-size:14px; letter-spacing:.02em;
+    box-shadow:0 4px 18px rgba(0,0,0,.55); opacity:0; transform:translateY(10px);
+    transition:opacity .25s, transform .25s; max-width:min(80vw,560px); text-align:center;
+  }
+  .toast.on{opacity:1; transform:none}
+  .toast.surprise{border-color:var(--corail); color:#ffd9c9; font-weight:600}
+  .toast.eclair{border-color:var(--or); color:#ffeccb; box-shadow:0 0 22px rgba(255,196,107,.4)}
+  .overlay{position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:50; padding:20px}
+  .hidden{display:none !important}
+  #handoff{background:linear-gradient(180deg,var(--nuit),var(--nuit2)); cursor:pointer; text-align:center; gap:18px}
+  #handoff .small{color:var(--gris); letter-spacing:.34em; text-indent:.34em; font-size:13px}
+  #handoff h2{font-family:Georgia,serif; font-size:52px; letter-spacing:.12em; line-height:1.1; text-shadow:0 0 26px currentColor}
+  #handoff .note{color:var(--encre); font-size:15px; max-width:480px; line-height:1.5}
+  #handoff .pulse{color:var(--or); font-size:13.5px; letter-spacing:.1em; animation:pulse 1.6s ease-in-out infinite; margin-top:6px}
+  .orn{width:min(320px,70vw); height:1px; background:linear-gradient(90deg,transparent,rgba(255,196,107,.55),transparent)}
+  @keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+  #victory{background:rgba(5,19,26,.78); backdrop-filter:blur(3px); text-align:center}
+  .card{
+    background:#0e2833; border:1px solid rgba(255,196,107,.35); border-radius:14px;
+    padding:34px 44px; box-shadow:0 10px 50px rgba(0,0,0,.6); max-width:min(92vw,560px);
+    display:flex; flex-direction:column; align-items:center; gap:12px;
+  }
+  .card .small{color:var(--gris); letter-spacing:.3em; text-indent:.3em; font-size:11.5px}
+  .card h2{font-family:Georgia,serif; font-size:36px; letter-spacing:.1em; text-shadow:0 0 22px currentColor}
+  .card .sub{color:var(--encre); font-size:15px; line-height:1.5}
+  .card .row{display:flex; gap:12px; margin-top:10px; flex-wrap:wrap; justify-content:center}
+  #rules{background:rgba(5,19,26,.8); z-index:60; overflow:auto; padding:26px}
+  #rules .card{max-width:min(94vw,720px); text-align:left; align-items:stretch; padding:28px 34px; gap:10px; max-height:88vh; overflow:auto}
+  #rules h2{font-size:22px; text-align:center; color:var(--or); margin-bottom:4px}
+  #rules h3{color:var(--or); font-size:14px; letter-spacing:.14em; margin-top:14px; border-bottom:1px solid rgba(255,196,107,.2); padding-bottom:4px}
+  #rules p, #rules li{font-size:14px; line-height:1.55; color:var(--encre)}
+  #rules ul{padding-left:20px}
+  #rules .pourquoi{
+    margin-top:16px; font-style:italic; color:var(--or); background:rgba(255,196,107,.07);
+    border-left:3px solid rgba(255,196,107,.5); padding:10px 14px; border-radius:0 8px 8px 0; font-size:14px;
+  }
+  #rules .row{justify-content:center; margin-top:14px}
+
+  /* ---- accueil / modes / salon LOB7 ---- */
+  #rules{z-index:90}
+  #accueil{z-index:70; background:rgba(5,19,26,.9); backdrop-filter:blur(3px)}
+  #lobby{z-index:76; background:rgba(5,19,26,.94)}
+  #perdue{z-index:86; background:rgba(5,19,26,.9); backdrop-filter:blur(3px)}
+  #accueil .modes{display:flex; flex-direction:column; gap:10px; width:100%; max-width:440px; margin-top:6px}
+  button.mode{display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%;
+    text-align:left; padding:11px 16px; font-size:15px}
+  button.mode small{color:var(--gris); font-size:11.5px; letter-spacing:.02em; font-weight:400}
+  button.mode:hover small{color:var(--encre)}
+  #niveaux{display:flex; gap:10px; width:100%; max-width:440px}
+  #niveaux button{flex:1}
+  #accueil-msg{color:#ffd9c9; border:1px solid rgba(255,145,102,.4); background:rgba(255,145,102,.07);
+    padding:9px 14px; border-radius:8px; font-size:13px; line-height:1.45; max-width:440px; text-align:center}
+</style>
+</head>
+<body>
+<noscript>Ce jeu nécessite JavaScript.</noscript>
+<header>
+  <div class="brand">
+    <h1>BRUME</h1>
+    <p>Les échecs dans le brouillard</p>
+  </div>
+  <div id="turnchip"><span class="pion"></span><span id="turnchip-txt">…</span></div>
+  <div class="actions">
+    <button id="btn-new" type="button">Nouvelle partie</button>
+    <button id="btn-rules" type="button">Règles</button>
+    <button id="btn-leave" type="button" class="hidden">Quitter le salon</button>
+  </div>
+</header>
+<div id="eclairbar">
+  <canvas id="eclair-ico" width="40" height="40"></canvas>
+  <span id="eclair-info">…</span>
+</div>
+<main id="board-wrap">
+  <canvas id="board"></canvas>
+  <div id="toasts"></div>
+</main>
+
+<div id="handoff" class="overlay hidden" role="button" tabindex="0">
+  <div class="orn"></div>
+  <p class="small">PASSE L'APPAREIL À</p>
+  <h2 id="handoff-player">AZUR</h2>
+  <p class="note" id="handoff-note"></p>
+  <p class="pulse">Clique n'importe où pour continuer</p>
+  <div class="orn"></div>
+</div>
+
+<div id="victory" class="overlay hidden">
+  <div class="card">
+    <p class="small">FIN DE PARTIE</p>
+    <h2 id="vic-title">VICTOIRE</h2>
+    <p class="sub" id="vic-sub"></p>
+    <div class="row">
+      <button id="btn-replay" type="button">Rejouer</button>
+      <button id="btn-inspect" type="button">Voir le plateau</button>
+    </div>
+  </div>
+</div>
+
+<div id="rules" class="overlay hidden">
+  <div class="card">
+    <h2>RÈGLES</h2>
+    <h3>BUT DU JEU</h3>
+    <p>Capturer le <b>Phare</b> adverse. Qui perd son Phare perd la partie, immédiatement.</p>
+    <h3>PLATEAU</h3>
+    <p>Un hexagone de 61 cases (rayon 4), en coordonnées axiales.</p>
+    <h3>TES PIÈCES (5)</h3>
+    <ul>
+      <li><b>Phare</b> (roi) : 1 case dans l'une des 6 directions.</li>
+      <li><b>Gardes</b> (2) : en ligne droite, de 1 à 2 cases.</li>
+      <li><b>Lanciers</b> (2) : en ligne droite, de 1 à 3 cases.</li>
+    </ul>
+    <p>Aucun saut : toute pièce présente sur la trajectoire — même cachée par le brouillard — bloque.
+    Un glissement qui rencontre une pièce ennemie s'arrête dessus et la capture.</p>
+    <h3>LE BROUILLARD</h3>
+    <p>À ton tour, tu ne vois que tes pièces et les cases situées à distance hexagonale ≤ 1 d'elles.
+    Tout le reste du plateau est noir : les pièces ennemies n'apparaissent que dans ce rayon.</p>
+    <h3>L'ÉCLAIR</h3>
+    <p>Chaque joueur a son propre compteur. Au début de ton 4<sup>e</sup>, 8<sup>e</sup>, 12<sup>e</sup>… tour,
+    un éclair révèle toutes les pièces ennemies pendant tout ce tour — puis le brouillard retombe.</p>
+    <h3>COUPS À L'AVEUGLE</h3>
+    <p>Tu peux jouer vers des cases que tu ne vois pas. Si la case ou la trajectoire contenait un ennemi
+    caché, le coup se résout normalement : <b>capture surprise !</b></p>
+    <h3>SOUVENIRS</h3>
+    <p>Une pièce ennemie aperçue puis perdue de vue laisse un fantôme estompé à sa dernière position connue,
+    étiqueté du numéro de tour (T) de l'observation. Un souvenir n'est jamais un blocage : ce n'est qu'un souvenir.</p>
+    <h3>PASSAGE D'APPAREIL</h3>
+    <p>Partie à deux sur le même écran. Après chaque coup, l'écran de passage masque totalement le plateau :
+    le joueur suivant ne voit jamais la vue de l'adversaire.</p>
+    <h3>TOURS PASSÉS</h3>
+    <p>Aucun coup légal : ton tour est passé automatiquement. Deux passes consécutives : la partie est nulle.</p>
+    <h3>CONTRE L'IA</h3>
+    <p>Tu joues Azur, l'IA joue Corail (niveau facile ou normal). L'IA est honnête : elle ne voit jamais
+    tes positions réelles. Elle décide uniquement avec ses pièces, son rayon de vision, ses souvenirs
+    estompés et les révélations de ses propres éclairs — exactement les mêmes informations que toi.
+    En facile, elle joue environ six coups sur dix au hasard (légaux) ; en normal, elle privilégie les
+    captures visibles (Phare &gt; Lancier &gt; Garde), avance vers tes pièces aperçues, protège son Phare
+    et explore le brouillard.</p>
+    <h3>EN LIGNE — SALON LOB7</h3>
+    <p>Deux joueurs à distance dans un salon LOB7 (lob7.com). Le plus petit identifiant de connexion
+    devient Azur, l'autre Corail. Chaque écran ne dessine que sa propre vue : l'état complet du plateau
+    ne circule jamais dans le salon. Mention honnête : le joueur Azur est aussi l'hôte-arbitre
+    technique — son navigateur applique les règles et diffuse à Corail sa vue filtrée, calculée par le
+    même code de brouillard. C'est une confiance due à l'hôte, comme un arbitre-joueur au plateau.
+    Si la connexion se perd, la partie s'arrête (pas de reprise pour l'instant).</p>
+    <p class="pourquoi">Pourquoi impossible avant l'informatique : il faudrait deux plateaux dupliqués et un arbitre permanent.</p>
+    <div class="row"><button id="btn-rules-close" type="button">Fermer</button></div>
+  </div>
+</div>
+
+<div id="accueil" class="overlay">
+  <div class="card">
+    <p class="small">LES ÉCHECS DANS LE BROUILLARD</p>
+    <h2 style="color:var(--or)">BRUME</h2>
+    <p class="sub">Hexagone de 61 cases, éclairs révélateurs, souvenirs estompés.<br>Choisis ton mode de jeu :</p>
+    <div class="modes">
+      <button class="mode" id="m-hotseat" type="button">
+        Deux joueurs — même écran
+        <small>La partie se passe l'appareil après chaque coup, comme au plateau.</small>
+      </button>
+      <button class="mode" id="m-ia" type="button">
+        Contre l'IA
+        <small>Tu joues Azur, l'IA joue Corail — elle ne voit pas plus que toi.</small>
+      </button>
+      <div id="niveaux" class="hidden">
+        <button id="m-ia-facile" type="button">Facile</button>
+        <button id="m-ia-normal" type="button">Normal</button>
+      </div>
+      <button class="mode" id="m-online" type="button">
+        En ligne — salon LOB7
+        <small>Deux joueurs à distance via lob7.com, dans le même salon.</small>
+      </button>
+    </div>
+    <p id="accueil-msg" class="hidden"></p>
+    <div class="row"><button id="btn-accueil-rules" type="button">Lire les règles</button></div>
+  </div>
+</div>
+
+<div id="lobby" class="overlay hidden">
+  <div class="card">
+    <p class="small">SALON LOB7</p>
+    <h2 style="color:var(--or)">EN LIGNE</h2>
+    <p class="sub" id="lobby-msg">Connexion au salon…</p>
+    <p class="pulse">Ne ferme pas cette page</p>
+    <div class="row"><button id="btn-lobby-cancel" type="button">Annuler</button></div>
+  </div>
+</div>
+
+<div id="perdue" class="overlay hidden">
+  <div class="card">
+    <p class="small">SALON LOB7</p>
+    <h2 style="color:var(--corail)">CONNEXION PERDUE</h2>
+    <p class="sub" id="perdue-msg">Le salon LOB7 n'est plus disponible.</p>
+    <div class="row"><button id="btn-perdue-retour" type="button">Retour à l'accueil</button></div>
+  </div>
+</div>
+
+<!-- SDK LOB7 Rooms — COPIE INLINE INTÉGRALE (aucune ressource externe chargée).
+     Provenance exacte : C:\dev\lob7\site\examples\prism-pair\lob7-rooms.js
+     (SDK officiel LOB7, expose globalThis.LOB7Rooms ; rejette proprement hors
+     lecteur LOB7 avec le code ROOM_PREVIEW_REQUIRED). -->
+<script>
+/* LOB7 Rooms SDK. Bundle locally; load before the optional lob7-rooms-p2p.js helper. */
+(function () {
+  'use strict';
+  var PARENT_ORIGINS = ['https://lob7.com', 'https://www.lob7.com'];
+  var active = null;
+  var connecting = null;
+  function identifier() {
+    var bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+  }
+  function errorFrom(value) {
+    var error = new Error(value.message || 'Room request failed.');
+    error.code = value.code || 'ROOM_REQUEST_FAILED';
+    if (Number.isInteger(value.status)) error.status = value.status;
+    if (Number.isFinite(value.retryAfterSeconds)) error.retryAfterSeconds = value.retryAfterSeconds;
+    return error;
+  }
+  function validData(value) {
+    var todo = [{ value: value, depth: 0 }], seen = new Set(), nodes = 0;
+    while (todo.length) {
+      var item = todo.pop(), current = item.value;
+      if (++nodes > 8192 || item.depth > 64) return false;
+      if (typeof current === 'string') { if (current.length > 8192) return false; continue; }
+      if (current === null || typeof current === 'boolean') continue;
+      if (typeof current === 'number') { if (!Number.isFinite(current)) return false; continue; }
+      if (typeof current !== 'object' || seen.has(current)) return false;
+      seen.add(current);
+      if (!Array.isArray(current) && Object.getPrototypeOf(current) !== Object.prototype && Object.getPrototypeOf(current) !== null) return false;
+      var keys = Object.keys(current);
+      if (keys.length + todo.length > 8192 || keys.some(function (key) { return key.length > 8192; })) return false;
+      if (Array.isArray(current) && (current.length > 8192 || keys.length !== current.length)) return false;
+      Object.values(current).forEach(function (child) { todo.push({ value: child, depth: item.depth + 1 }); });
+    }
+    try { return new TextEncoder().encode(JSON.stringify(value)).byteLength <= 8192; } catch (_) { return false; }
+  }
+  function connection(room, port) {
+    var pending = new Map(), stopped = false, stopSubscription = null, subscriptionError = null, disconnectListeners = new Set();
+    function disconnect(reason) {
+      if (stopped) return;
+      stopped = true;
+      globalThis.removeEventListener('pagehide', leaveOnExit);
+      disconnectListeners.forEach(function (listener) { listener(errorFrom(reason)); });
+      disconnectListeners.clear();
+      var onError = subscriptionError;
+      if (stopSubscription) stopSubscription();
+      if (onError) { try { onError(errorFrom(reason)); } catch (_) { /* observer only */ } }
+      pending.forEach(function (task) { globalThis.clearTimeout(task.timer); task.reject(errorFrom(reason)); });
+      pending.clear();
+      port.close();
+      if (active === result) active = null;
+    }
+    port.onmessage = function (event) {
+      var response = event.data;
+      if (response && response.type === 'disconnected') return disconnect(response.error || { code: 'ROOM_CHANGED' });
+      var task = response && pending.get(response.requestId);
+      if (!task) return;
+      globalThis.clearTimeout(task.timer);
+      pending.delete(response.requestId);
+      if (response.error) task.reject(errorFrom(response.error));
+      else task.resolve(response.result);
+    };
+    port.onmessageerror = function () { disconnect({ code: 'ROOM_CONNECTION_CLOSED', message: 'The room connection closed. Connect again.' }); };
+    port.start();
+    function request(method, params) {
+      if (stopped) return Promise.reject(errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' }));
+      if (pending.size >= 4) return Promise.reject(errorFrom({ code: 'ROOM_BUSY', message: 'Too many requests are in progress.', retryAfterSeconds: 3 }));
+      var id = identifier();
+      return new Promise(function (resolve, reject) {
+        var timer = globalThis.setTimeout(function () {
+          pending.delete(id);
+          reject(errorFrom({ code: 'ROOM_TIMEOUT', message: 'The room request timed out. Retry a send using the same idempotency key.' }));
+        }, 25000);
+        pending.set(id, { resolve: resolve, reject: reject, timer: timer });
+        try { port.postMessage({ requestId: id, method: method, params: params }); }
+        catch (_) { globalThis.clearTimeout(timer); pending.delete(id); reject(errorFrom({ code: 'ROOM_PAYLOAD_INVALID' })); }
+      });
+    }
+    var result = {
+      room: room,
+      read: function (options) {
+        options = options || {};
+        return request('read', { after: options.after === undefined ? 0 : options.after, limit: options.limit === undefined ? 50 : options.limit }).then(function (batch) {
+          if (Number.isSafeInteger(batch.cursor)) room.lastSequence = Math.max(room.lastSequence || 0, batch.cursor);
+          return batch;
+        });
+      },
+      send: function (data, options) {
+        var key = options && options.idempotencyKey || identifier();
+        var promise = validData(data)
+          ? request('send', { data: data, idempotencyKey: key })
+          : Promise.reject(errorFrom({ code: 'ROOM_PAYLOAD_INVALID', message: 'Use finite JSON data no larger than 8192 UTF-8 bytes.' }));
+        return promise.then(function (response) { return response.message; }).catch(function (error) { error.idempotencyKey = key; throw error; });
+      },
+      subscribe: function (callback, options) {
+        options = options || {};
+        if (typeof callback !== 'function') throw new TypeError('subscribe requires a callback.');
+        if (stopSubscription) throw errorFrom({ code: 'ROOM_SUBSCRIPTION_EXISTS', message: 'Stop the current subscription before starting another.' });
+        if (stopped) throw errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' });
+        var cursor = options.after === undefined ? 0 : options.after;
+        if (!Number.isSafeInteger(cursor) || cursor < 0) throw new TypeError('after must be a nonnegative integer.');
+        var cancelled = false, timer = null, delay = 3000;
+        function stop() { cancelled = true; if (timer !== null) globalThis.clearTimeout(timer); if (stopSubscription === stop) { stopSubscription = null; subscriptionError = null; } }
+        async function poll() {
+          if (cancelled || stopped) return;
+          try {
+            var batch = await result.read({ after: cursor });
+            for (var message of batch.messages) {
+              if (cancelled || stopped) return;
+              await callback(message);
+              cursor = message.sequence;
+            }
+            cursor = Math.max(cursor, batch.cursor);
+            delay = batch.messages.length ? 3000 : Math.min(delay * 1.5, 15000);
+            delay = Math.max(delay, (batch.pollAfterSeconds || 3) * 1000);
+          } catch (error) {
+            if (cancelled || stopped) return;
+            if (['ROOM_EXPIRED', 'ROOM_NOT_FOUND', 'RELEASE_NOT_FOUND', 'ACCOUNT_SUSPENDED', 'GAME_NOT_ALLOWED', 'SCOPE_REQUIRED', 'AUTH_INVALID', 'AUTH_REQUIRED'].includes(error.code)) {
+              disconnect(error);
+              return;
+            }
+            delay = Math.max(Math.min(delay * 2, 30000), (error.retryAfterSeconds || 0) * 1000);
+            if (typeof options.onError === 'function') { try { options.onError(error); } catch (_) { /* callback cannot break cleanup */ } }
+          }
+          if (!cancelled && !stopped) timer = globalThis.setTimeout(poll, delay + Math.floor(Math.random() * 250));
+        }
+        stopSubscription = stop;
+        subscriptionError = typeof options.onError === 'function' ? options.onError : null;
+        void poll();
+        return stop;
+      },
+    };
+    if (typeof globalThis.LOB7RoomsP2P === 'function') result.connectPeer = function (options) {
+      return globalThis.LOB7RoomsP2P(result, options, function (listener) {
+        if (stopped) throw errorFrom({ code: 'ROOM_CONNECTION_CLOSED', message: 'Connect to the selected room again.' });
+        disconnectListeners.add(listener);
+        return function () { disconnectListeners.delete(listener); };
+      }, { identifier: identifier, errorFrom: errorFrom, validData: validData });
+    };
+    function leaveOnExit(event) {
+      if (event.persisted) return;
+      disconnect({ code: 'ROOM_CONNECTION_CLOSED', message: 'The game document closed.' });
+    }
+    globalThis.addEventListener('pagehide', leaveOnExit);
+    return result;
+  }
+  function connect() {
+    if (active) return Promise.resolve(active);
+    if (connecting) return connecting;
+    if (globalThis.parent === globalThis) return Promise.reject(errorFrom({ code: 'ROOM_PREVIEW_REQUIRED', message: 'Open this project in its LOB7 preview and choose a room.' }));
+    connecting = new Promise(function (resolve, reject) {
+      var nonce = identifier(), requestId = identifier(), timeout, deferred;
+      function cleanup() {
+        globalThis.removeEventListener('message', receive);
+        globalThis.removeEventListener('load', ready);
+        globalThis.clearTimeout(timeout);
+        if (deferred !== undefined) globalThis.clearTimeout(deferred);
+      }
+      function receive(event) {
+        var response = event.data;
+        if (event.source !== globalThis.parent || !PARENT_ORIGINS.includes(event.origin) || !response || response.type !== 'lob7.rooms.connected'
+          || response.nonce !== nonce || response.requestId !== requestId) return;
+        cleanup();
+        if (response.error) return reject(errorFrom(response.error));
+        if (!response.room || !event.ports[0]) return reject(errorFrom({ code: 'ROOM_PROTOCOL_INVALID' }));
+        active = connection(response.room, event.ports[0]);
+        resolve(active);
+      }
+      // Run after the parent's iframe load handler has invalidated any previous document.
+      function ready() { deferred = globalThis.setTimeout(function () { PARENT_ORIGINS.forEach(function (origin) { globalThis.parent.postMessage({ type: 'lob7.rooms.connect', nonce: nonce, requestId: requestId }, origin); }); }, 0); }
+      globalThis.addEventListener('message', receive);
+      timeout = globalThis.setTimeout(function () { cleanup(); reject(errorFrom({ code: 'ROOM_BRIDGE_UNAVAILABLE', message: 'This document is not connected to the LOB7 room panel.' })); }, 8000);
+      if (globalThis.document.readyState === 'complete') ready();
+      else globalThis.addEventListener('load', ready, { once: true });
+    }).finally(function () { connecting = null; });
+    return connecting;
+  }
+  globalThis.LOB7Rooms = Object.freeze({ connect: connect });
+})();
+</script>
+
+<script>
+'use strict';
+/* ============================================================
+   BRUME — Les échecs dans le brouillard
+   Prototype 1/5 « jeux impossibles avant l'informatique »
+   Fichier unique, vanilla JS, aucune dépendance, aucun réseau.
+   Structure : constantes > géométrie > logique pure (état) >
+   couche assets > rendu canvas > interface > boucle > boot.
+   ============================================================ */
+
+/* ---------- 1. Constantes ---------- */
+var COL = { nuit:'#0a1a20', azur:'#6ec8ff', corail:'#ff9166', or:'#ffc46b', encre:'#cfe0e6' };
+var SQRT3 = Math.sqrt(3);
+var RADIUS = 4;                                   // rayon du plateau
+var DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]; // 6 directions axiales
+var RANGE = { phare:1, garde:2, lancier:3 };
+var NOM_TYPE = { phare:'Phare', garde:'Garde', lancier:'Lancier' };
+var NOM_J = { azur:'Azur', corail:'Corail' };
+
+var CELLS = [];                                   // les 61 cases (q,r)
+(function(){
+  for (var q = -RADIUS; q <= RADIUS; q++)
+    for (var r = -RADIUS; r <= RADIUS; r++)
+      if (Math.abs(q + r) <= RADIUS) CELLS.push({q:q, r:r});
+})();
+
+function opp(p){ return p === 'azur' ? 'corail' : 'azur'; }
+function key(q, r){ return q + ',' + r; }
+function inBoard(q, r){ return Math.abs(q) <= RADIUS && Math.abs(r) <= RADIUS && Math.abs(q + r) <= RADIUS; }
+function hexDist(q1, r1, q2, r2){ var dq = q1 - q2, dr = r1 - r2; return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2; }
+
+/* ---------- 2. Géométrie hex (pointy-top) ---------- */
+function cellToPixel(q, r, size, cx, cy){
+  return { x: cx + SQRT3 * size * (q + r / 2), y: cy + 1.5 * size * r };
+}
+function pixelToCell(px, py, size, cx, cy){
+  var x = (px - cx) / size, y = (py - cy) / size;
+  return cubeRound(SQRT3 / 3 * x - y / 3, 2 / 3 * y);
+}
+function cubeRound(qf, rf){
+  var sf = -qf - rf;
+  var q = Math.round(qf), r = Math.round(rf), s = Math.round(sf);
+  var dq = Math.abs(q - qf), dr = Math.abs(r - rf), ds = Math.abs(s - sf);
+  if (dq > dr && dq > ds) q = -r - s;
+  else if (dr > ds) r = -q - s;
+  return { q: q, r: r };
+}
+function hexPath(ctx, x, y, size){
+  ctx.beginPath();
+  for (var k = 0; k < 6; k++){
+    var a = Math.PI / 180 * (60 * k + 30);
+    var vx = x + size * Math.cos(a), vy = y + size * Math.sin(a);
+    if (k === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+  }
+  ctx.closePath();
+}
+
+/* ---------- 3. Logique pure (état du jeu, sans DOM) ---------- */
+/* G = { pieces, turn, counts, memories, lastCapture, passStreak, phase, winner, vicReason } */
+
+function newGame(){
+  var pieces = [], id = 0;
+  // Azur sur r = +4 : Phare q=-2 ; Gardes q=-4 et q=0 ; Lanciers q=-3 et q=-1
+  pieces.push({ id:'A'+(id++), type:'phare',   player:'azur',   q:-2, r: 4, alive:true });
+  pieces.push({ id:'A'+(id++), type:'garde',   player:'azur',   q:-4, r: 4, alive:true });
+  pieces.push({ id:'A'+(id++), type:'garde',   player:'azur',   q: 0, r: 4, alive:true });
+  pieces.push({ id:'A'+(id++), type:'lancier', player:'azur',   q:-3, r: 4, alive:true });
+  pieces.push({ id:'A'+(id++), type:'lancier', player:'azur',   q:-1, r: 4, alive:true });
+  // Corail en miroir sur r = -4
+  pieces.push({ id:'C'+(id++), type:'phare',   player:'corail', q: 2, r:-4, alive:true });
+  pieces.push({ id:'C'+(id++), type:'garde',   player:'corail', q: 4, r:-4, alive:true });
+  pieces.push({ id:'C'+(id++), type:'garde',   player:'corail', q: 0, r:-4, alive:true });
+  pieces.push({ id:'C'+(id++), type:'lancier', player:'corail', q: 3, r:-4, alive:true });
+  pieces.push({ id:'C'+(id++), type:'lancier', player:'corail', q: 1, r:-4, alive:true });
+  return {
+    pieces: pieces,
+    turn: 'azur',
+    counts: { azur:0, corail:0 },
+    memories: { azur:{}, corail:{} },   // par joueur : id -> {q, r, turn}
+    lastCapture: null,                  // {type, player} victime du dernier coup
+    passStreak: 0,
+    phase: 'handoff',                   // handoff | playing | over
+    winner: null,
+    vicReason: ''
+  };
+}
+
+function pieceAt(G, q, r){
+  for (var i = 0; i < G.pieces.length; i++){
+    var p = G.pieces[i];
+    if (p.alive && p.q === q && p.r === r) return p;
+  }
+  return null;
+}
+
+/* Vision du joueur : ses pièces + cases à distance hex <= 1. */
+function computeVision(G, player){
+  var vis = {};
+  G.pieces.forEach(function(p){
+    if (!p.alive || p.player !== player) return;
+    vis[key(p.q, p.r)] = true;
+    for (var i = 0; i < 6; i++){
+      var q = p.q + DIRS[i][0], r = p.r + DIRS[i][1];
+      if (inBoard(q, r)) vis[key(q, r)] = true;
+    }
+  });
+  return vis;
+}
+function isEclairTurn(G, player){
+  return G.counts[player] > 0 && G.counts[player] % 4 === 0 && G.turn === player;
+}
+
+/* Mise à jour des souvenirs du joueur (début de tour + après son coup). */
+function updateMemory(G, player){
+  var vis = computeVision(G, player);
+  var ecl = isEclairTurn(G, player);
+  var mem = G.memories[player];
+  var vivants = {};
+  G.pieces.forEach(function(p){ if (p.alive && p.player !== player) vivants[p.id] = p; });
+  Object.keys(mem).forEach(function(id){ if (!vivants[id]) delete mem[id]; });
+  Object.keys(vivants).forEach(function(id){
+    var p = vivants[id];
+    var vu = ecl || vis[key(p.q, p.r)];
+    if (vu){
+      mem[id] = { q:p.q, r:p.r, turn:G.counts[player] };
+    } else if (mem[id] && vis[key(mem[id].q, mem[id].r)]){
+      delete mem[id]; // case visible mais vide : souvenir réfuté
+    }
+  });
+}
+
+/* Cibles légales CONNUES du joueur (aucune fuite d'info cachée) :
+   propres pièces + ennemis visibles (ou éclair) bloquent ; le brouillard
+   et les fantômes laissent passer — coups à l'aveugle autorisés. */
+function legalTargets(G, piece){
+  if (!piece.alive) return [];
+  var player = piece.player;
+  var vis = computeVision(G, player);
+  var ecl = isEclairTurn(G, player);
+  var range = RANGE[piece.type];
+  var out = [];
+  for (var i = 0; i < 6; i++){
+    var d = DIRS[i];
+    for (var n = 1; n <= range; n++){
+      var q = piece.q + d[0] * n, r = piece.r + d[1] * n;
+      if (!inBoard(q, r)) break;
+      var occ = pieceAt(G, q, r);
+      if (occ && occ.player === player) break;               // bloqué par une pièce alliée
+      var ennemiConnu = occ && (ecl || vis[key(q, r)]);       // ennemi réellement su
+      out.push({ q:q, r:r, capture: !!ennemiConnu });
+      if (ennemiConnu) break;                                 // pas de cible au-delà d'un ennemi su
+    }
+  }
+  return out;
+}
+
+function hasAnyMove(G, player){
+  return G.pieces.some(function(p){ return p.alive && p.player === player && legalTargets(G, p).length > 0; });
+}
+
+/* Résolution d'un coup sur le plateau RÉEL. Renvoie
+   {ok, from, to, capture, events} — le glissement s'arrête sur la
+   première pièce rencontrée (capture si ennemie). */
+function attemptMove(G, pieceId, tq, tr){
+  var piece = null;
+  G.pieces.forEach(function(p){ if (p.id === pieceId) piece = p; });
+  if (!piece || !piece.alive || G.phase === 'over') return { ok:false, reason:'fin-de-partie' };
+  if (G.turn !== piece.player) return { ok:false, reason:'pas-à-toi' };
+
+  var dq = tq - piece.q, dr = tr - piece.r, dir = null, dist = 0;
+  for (var i = 0; i < 6; i++){
+    var d = DIRS[i];
+    if (dq * d[1] - dr * d[0] !== 0) continue;          // non colinéaire
+    var dot = dq * d[0] + dr * d[1];
+    if (dot <= 0) continue;                              // mauvais sens
+    var n = dot / (d[0] * d[0] + d[1] * d[1]);
+    if (n === Math.round(n)) { dir = d; dist = n; }
+  }
+  if (!dir || dist < 1 || dist > RANGE[piece.type] || !inBoard(tq, tr))
+    return { ok:false, reason:'geo' };
+
+  var visAvant = computeVision(G, piece.player);
+  var ecl = isEclairTurn(G, piece.player);
+
+  var dest = null, capture = null;
+  for (var n2 = 1; n2 <= dist; n2++){
+    var cq = piece.q + dir[0] * n2, cr = piece.r + dir[1] * n2;
+    var occ = pieceAt(G, cq, cr);
+    if (occ){
+      if (occ.player === piece.player) return { ok:false, reason:'bloque-allie' };
+      dest = { q:cq, r:cr }; capture = occ; break;
+    }
+  }
+  if (!dest) dest = { q:tq, r:tr };
+
+  var from = { q:piece.q, r:piece.r };
+  var events = [{ type:'move', piece:piece, from:from, to:dest }];
+  piece.q = dest.q; piece.r = dest.r;
+
+  if (capture){
+    capture.alive = false;
+    G.lastCapture = { type:capture.type, player:capture.player };
+    var cache = !ecl && !visAvant[key(capture.q, capture.r)];
+    events.push({ type:'capture', victime:capture, par:piece, surprise:cache });
+    if (cache) events.push({ type:'surprise', victime:capture, par:piece });
+    if (capture.type === 'phare'){
+      G.phase = 'over'; G.winner = piece.player;
+      G.vicReason = 'Le Phare ' + (capture.player === 'azur' ? 'azur' : 'corail') + ' a été capturé.';
+      events.push({ type:'phare', winner:piece.player });
+    }
+  } else {
+    G.lastCapture = null;
+  }
+  return { ok:true, from:from, to:dest, capture:capture, events:events };
+}
+
+/* Début du tour du joueur courant : compteur, éclair, souvenirs, passe auto. */
+function beginTurn(G){
+  var p = G.turn, ev = [];
+  G.counts[p]++;
+  if (G.lastCapture && G.lastCapture.player === p){
+    ev.push({ type:'perte', pieceType:G.lastCapture.type });
+    G.lastCapture = null;
+  }
+  updateMemory(G, p);
+  var ecl = isEclairTurn(G, p);
+  if (!hasAnyMove(G, p)){
+    ev.push({ type:'pass', player:p });
+    G.passStreak++;
+    if (G.passStreak >= 2){
+      G.phase = 'over'; G.winner = null;
+      G.vicReason = 'Plus aucun coup légal pour les deux camps.';
+      ev.push({ type:'nulle' });
+      return ev;
+    }
+    G.turn = opp(p);
+    G.phase = 'handoff';
+    return ev;
+  }
+  G.passStreak = 0;
+  if (ecl) ev.push({ type:'eclair', player:p });
+  G.phase = 'playing';
+  return ev;
+}
+
+/* Fin du coup : on passe la main. */
+function endTurn(G){
+  G.turn = opp(G.turn);
+  G.phase = 'handoff';
+}
+
+/* ---------- 4. Couche d'intégration des assets ----------
+   Charge dynamiquement assets/manifest.js (JS pur, compatible file://).
+   asset(id, tailleCssPx) -> HTMLImageElement prête, ou null.
+   Choix de la variante : plus petite variante >= taille*dpr. */
+var Assets = {
+  manifest: null,
+  byId: {},
+  images: {},
+  init: function(){
+    if (typeof document === 'undefined') return;
+    var s = document.createElement('script');
+    s.src = 'assets/manifest.js';
+    s.onload = function(){
+      var m = typeof window !== 'undefined' ? window.ASSETS_MANIFEST : null;
+      if (!m || !m.assets) return;
+      Assets.manifest = m;
+      m.assets.forEach(function(a){ Assets.byId[a.id] = a; });
+    };
+    s.onerror = function(){ /* pas d'assets : rendu procédural */ };
+    document.head.appendChild(s);
+  },
+  get: function(id, cssPx){
+    if (!this.manifest) return null;
+    var entry = this.byId[id];
+    if (!entry) return null;
+    var file = null;
+    if (entry.format === 'svg'){
+      file = entry.file;
+    } else {
+      var dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+      var besoin = Math.ceil((cssPx || 256) * dpr);
+      var vars = (entry.variants || []).slice().sort(function(a, b){ return a.px - b.px; });
+      if (!vars.length) return null;
+      for (var i = 0; i < vars.length; i++){
+        file = vars[i].file;
+        if (vars[i].px >= besoin) break;
+      }
+    }
+    if (!file) return null;
+    var rec = this.images[file];
+    if (!rec){
+      var img = (typeof Image !== 'undefined') ? new Image() : null;
+      rec = { img: img, ok: false };
+      if (img){
+        var self = this;
+        img.onload = function(){ rec.ok = true; };
+        img.onerror = function(){ rec.ok = false; };
+        img.src = 'assets/' + file;
+      }
+      this.images[file] = rec;
+    }
+    return rec.ok ? rec.img : null;
+  }
+};
+function asset(id, cssPx){ return Assets.get(id, cssPx); }
+
+/* ---------- 5. Rendu ---------- */
+var cv, ctx, wrap, VIEW = { w:0, h:0, dpr:1 };
+
+function resize(){
+  var rect = wrap.getBoundingClientRect();
+  var dpr = window.devicePixelRatio || 1;
+  VIEW.w = Math.max(80, rect.width); VIEW.h = Math.max(80, rect.height); VIEW.dpr = dpr;
+  var w = Math.round(VIEW.w * dpr), h = Math.round(VIEW.h * dpr);
+  if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; }
+}
+
+function layout(){
+  var marge = 26;
+  var size = Math.min(
+    (VIEW.w - 2 * marge) / (SQRT3 * (2 * RADIUS + 1)),
+    (VIEW.h - 2 * marge) / (3 * RADIUS + 2)
+  );
+  return { size: size, cx: VIEW.w / 2, cy: VIEW.h / 2 };
+}
+
+/* Champ d'étoiles déterministe (décor discret, sous le plateau). */
+var STARS = [];
+(function(){
+  var seed = 42;
+  function rnd(){ seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; }
+  for (var i = 0; i < 130; i++)
+    STARS.push({ x: rnd(), y: rnd(), r: .4 + rnd() * 1.1, a: .04 + rnd() * .13, ph: rnd() * 6.28 });
+})();
+
+/* Palettes procédurales des pièces (relief : clair -> sombre). */
+var PAL = {
+  azur:   { hi:'#dbf1ff', mid:'#6ec8ff', lo:'#2c6fa8', deep:'#143c60', rim:'#bfe3ff' },
+  corail: { hi:'#ffe6d6', mid:'#ff9166', lo:'#bb532c', deep:'#6e2d13', rim:'#ffcfb2' }
+};
+function vGrad(ctx, y0, y1, c0, c1){
+  var g = ctx.createLinearGradient(0, y0, 0, y1);
+  g.addColorStop(0, c0); g.addColorStop(1, c1);
+  return g;
+}
+function rr(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+/* Éclair stylisé (h = hauteur), utilisé pour les badges et l'icône d'en-tête. */
+function boltPath(ctx, x, y, h){
+  ctx.beginPath();
+  ctx.moveTo(x + .16 * h, y - .5 * h);
+  ctx.lineTo(x - .24 * h, y + .06 * h);
+  ctx.lineTo(x - .03 * h, y + .06 * h);
+  ctx.lineTo(x - .16 * h, y + .5 * h);
+  ctx.lineTo(x + .24 * h, y - .06 * h);
+  ctx.lineTo(x + .03 * h, y - .06 * h);
+  ctx.closePath();
+}
+
+function drawPhare(ctx, x, y, s, P){
+  var i;
+  // socle
+  ctx.fillStyle = vGrad(ctx, y + .48 * s, y + .12 * s, P.deep, P.lo);
+  rr(ctx, x - .44 * s, y + .16 * s, .88 * s, .30 * s, .07 * s); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = .03 * s; ctx.stroke();
+  // tour trapèze
+  var tour = function(){
+    ctx.beginPath();
+    ctx.moveTo(x - .31 * s, y + .20 * s);
+    ctx.lineTo(x - .17 * s, y - .78 * s);
+    ctx.lineTo(x + .17 * s, y - .78 * s);
+    ctx.lineTo(x + .31 * s, y + .20 * s);
+    ctx.closePath();
+  };
+  tour();
+  ctx.fillStyle = vGrad(ctx, y + .2 * s, y - .8 * s, P.lo, P.mid); ctx.fill();
+  ctx.save(); tour(); ctx.clip();
+  ctx.fillStyle = P.hi; ctx.globalAlpha *= .8;
+  ctx.fillRect(x - .34 * s, y - .12 * s, .68 * s, .17 * s);
+  ctx.fillRect(x - .34 * s, y - .48 * s, .68 * s, .17 * s);
+  ctx.restore();
+  // arête éclairée (gauche)
+  ctx.strokeStyle = P.rim; ctx.globalAlpha *= .75; ctx.lineWidth = .045 * s;
+  ctx.beginPath(); ctx.moveTo(x - .27 * s, y + .17 * s); ctx.lineTo(x - .145 * s, y - .75 * s); ctx.stroke();
+  ctx.globalAlpha /= .75;
+  // galerie
+  ctx.fillStyle = P.deep;
+  ctx.fillRect(x - .27 * s, y - .88 * s, .54 * s, .10 * s);
+  ctx.strokeStyle = P.mid; ctx.lineWidth = .028 * s; ctx.globalAlpha *= .8;
+  for (i = -2; i <= 2; i++){
+    ctx.beginPath(); ctx.moveTo(x + i * .11 * s, y - .88 * s); ctx.lineTo(x + i * .11 * s, y - .99 * s); ctx.stroke();
+  }
+  ctx.globalAlpha /= .8;
+  // lanterne
+  ctx.fillStyle = P.deep;
+  ctx.fillRect(x - .14 * s, y - 1.18 * s, .28 * s, .28 * s);
+  var gl = ctx.createRadialGradient(x, y - 1.04 * s, 0, x, y - 1.04 * s, .16 * s);
+  gl.addColorStop(0, '#fff6de'); gl.addColorStop(.55, '#ffd992'); gl.addColorStop(1, '#cf9440');
+  ctx.fillStyle = gl;
+  ctx.fillRect(x - .095 * s, y - 1.135 * s, .19 * s, .19 * s);
+  // halo lumineux
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  var halo = ctx.createRadialGradient(x, y - 1.04 * s, 0, x, y - 1.04 * s, .55 * s);
+  halo.addColorStop(0, 'rgba(255,213,146,.34)'); halo.addColorStop(1, 'rgba(255,213,146,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(x, y - 1.04 * s, .55 * s, 0, 7); ctx.fill();
+  ctx.restore();
+  // dôme + pointe
+  ctx.fillStyle = '#d8a95e';
+  ctx.beginPath();
+  ctx.moveTo(x - .14 * s, y - 1.18 * s);
+  ctx.quadraticCurveTo(x, y - 1.40 * s, x + .14 * s, y - 1.18 * s);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ffc46b'; ctx.lineWidth = .03 * s;
+  ctx.beginPath(); ctx.moveTo(x, y - 1.34 * s); ctx.lineTo(x, y - 1.44 * s); ctx.stroke();
+}
+
+function drawGarde(ctx, x, y, s, P){
+  // corps trapu
+  ctx.beginPath();
+  ctx.moveTo(x - .37 * s, y + .18 * s);
+  ctx.bezierCurveTo(x - .40 * s, y - .10 * s, x - .33 * s, y - .28 * s, x - .16 * s, y - .32 * s);
+  ctx.lineTo(x + .16 * s, y - .32 * s);
+  ctx.bezierCurveTo(x + .33 * s, y - .28 * s, x + .40 * s, y - .10 * s, x + .37 * s, y + .18 * s);
+  ctx.closePath();
+  ctx.fillStyle = vGrad(ctx, y - .32 * s, y + .18 * s, P.mid, P.lo); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = .028 * s; ctx.stroke();
+  // arête éclairée
+  ctx.strokeStyle = P.rim; ctx.globalAlpha *= .7; ctx.lineWidth = .04 * s;
+  ctx.beginPath();
+  ctx.moveTo(x - .34 * s, y + .14 * s);
+  ctx.bezierCurveTo(x - .365 * s, y - .08 * s, x - .30 * s, y - .24 * s, x - .15 * s, y - .29 * s);
+  ctx.stroke(); ctx.globalAlpha /= .7;
+  // ceinture
+  ctx.strokeStyle = 'rgba(255,196,107,.75)'; ctx.lineWidth = .045 * s;
+  ctx.beginPath(); ctx.moveTo(x - .34 * s, y + .02 * s); ctx.lineTo(x + .34 * s, y + .02 * s); ctx.stroke();
+  // écusson
+  var ex = x, ey = y - .10 * s, ew = .15 * s, eh = .21 * s;
+  ctx.beginPath();
+  ctx.moveTo(ex, ey - eh);
+  ctx.lineTo(ex + ew, ey - eh * .55);
+  ctx.lineTo(ex + ew * .72, ey + eh * .75);
+  ctx.lineTo(ex, ey + eh);
+  ctx.lineTo(ex - ew * .72, ey + eh * .75);
+  ctx.lineTo(ex - ew, ey - eh * .55);
+  ctx.closePath();
+  ctx.fillStyle = P.deep; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,196,107,.85)'; ctx.lineWidth = .026 * s; ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(ex - ew * .55, ey - eh * .35);
+  ctx.lineTo(ex, ey + eh * .12);
+  ctx.lineTo(ex + ew * .55, ey - eh * .35);
+  ctx.lineTo(ex + ew * .55, ey - eh * .02);
+  ctx.lineTo(ex, ey + eh * .48);
+  ctx.lineTo(ex - ew * .55, ey - eh * .02);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,196,107,.9)'; ctx.fill();
+  // col + tête
+  ctx.fillStyle = P.deep;
+  ctx.fillRect(x - .10 * s, y - .40 * s, .20 * s, .08 * s);
+  var tg = ctx.createRadialGradient(x - .05 * s, y - .52 * s, .02 * s, x, y - .47 * s, .20 * s);
+  tg.addColorStop(0, P.hi); tg.addColorStop(1, P.mid);
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.arc(x, y - .47 * s, .165 * s, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = .024 * s; ctx.stroke();
+}
+
+function drawLancier(ctx, x, y, s, P){
+  // corps élancé
+  ctx.beginPath();
+  ctx.moveTo(x - .21 * s, y + .20 * s);
+  ctx.lineTo(x - .105 * s, y - .50 * s);
+  ctx.lineTo(x + .105 * s, y - .50 * s);
+  ctx.lineTo(x + .21 * s, y + .20 * s);
+  ctx.closePath();
+  ctx.fillStyle = vGrad(ctx, y - .5 * s, y + .2 * s, P.mid, P.lo); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = .026 * s; ctx.stroke();
+  ctx.strokeStyle = P.rim; ctx.globalAlpha *= .7; ctx.lineWidth = .038 * s;
+  ctx.beginPath(); ctx.moveTo(x - .175 * s, y + .17 * s); ctx.lineTo(x - .085 * s, y - .47 * s); ctx.stroke();
+  ctx.globalAlpha /= .7;
+  // ceinture
+  ctx.strokeStyle = 'rgba(255,196,107,.8)'; ctx.lineWidth = .04 * s;
+  ctx.beginPath(); ctx.moveTo(x - .16 * s, y - .02 * s); ctx.lineTo(x + .16 * s, y - .02 * s); ctx.stroke();
+  // col + tête
+  ctx.fillStyle = P.deep;
+  ctx.fillRect(x - .085 * s, y - .56 * s, .17 * s, .06 * s);
+  var tg = ctx.createRadialGradient(x - .04 * s, y - .68 * s, .015 * s, x, y - .64 * s, .16 * s);
+  tg.addColorStop(0, P.hi); tg.addColorStop(1, P.mid);
+  ctx.fillStyle = tg;
+  ctx.beginPath(); ctx.arc(x, y - .64 * s, .13 * s, 0, 7); ctx.fill();
+  // lance (à droite)
+  var lx0 = x + .55 * s, ly0 = y + .36 * s, lx1 = x + .36 * s, ly1 = y - 1.02 * s;
+  ctx.strokeStyle = '#8a6d3f'; ctx.lineWidth = .052 * s; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(lx0, ly0); ctx.lineTo(lx1, ly1); ctx.stroke();
+  ctx.lineCap = 'butt';
+  // fer de lance
+  ctx.beginPath();
+  ctx.moveTo(lx1, ly1 - .16 * s);
+  ctx.lineTo(lx1 - .065 * s, ly1 + .02 * s);
+  ctx.lineTo(lx1 + .065 * s, ly1 + .02 * s);
+  ctx.closePath();
+  ctx.fillStyle = '#d3daea'; ctx.fill();
+  ctx.strokeStyle = '#9aa6bb'; ctx.lineWidth = .022 * s; ctx.stroke();
+  // fanion
+  ctx.beginPath();
+  ctx.moveTo(lx1, ly1 + .06 * s);
+  ctx.lineTo(lx1 + .23 * s, ly1 + .13 * s);
+  ctx.lineTo(lx1, ly1 + .21 * s);
+  ctx.closePath();
+  ctx.fillStyle = P.mid; ctx.globalAlpha *= .92; ctx.fill(); ctx.globalAlpha /= .92;
+}
+
+function drawPieceProcedural(ctx, type, player, x, y, s, alpha){
+  ctx.save();
+  ctx.globalAlpha *= (alpha == null ? 1 : alpha);
+  var P = PAL[player];
+  ctx.fillStyle = 'rgba(2,5,10,.5)';
+  ctx.beginPath(); ctx.ellipse(x, y + .30 * s, .58 * s, .15 * s, 0, 0, 7); ctx.fill();
+  if (type === 'phare') drawPhare(ctx, x, y, s, P);
+  else if (type === 'garde') drawGarde(ctx, x, y, s, P);
+  else drawLancier(ctx, x, y, s, P);
+  ctx.restore();
+}
+
+/* Affiche une pièce : asset si disponible, sinon procédural. */
+function drawPiece(ctx, type, player, x, y, s, alpha){
+  var img = asset('brume/' + type + '/' + player, s * 2.1);
+  if (img){
+    ctx.save();
+    ctx.globalAlpha *= (alpha == null ? 1 : alpha);
+    ctx.fillStyle = 'rgba(2,5,10,.5)';
+    ctx.beginPath(); ctx.ellipse(x, y + .30 * s, .58 * s, .15 * s, 0, 0, 7); ctx.fill();
+    var L = 1.92 * s;
+    try { ctx.drawImage(img, x - L / 2, y - L * .60, L, L); }
+    catch (e){ ctx.restore(); drawPieceProcedural(ctx, type, player, x, y, s, alpha); return; }
+    ctx.restore();
+    return;
+  }
+  drawPieceProcedural(ctx, type, player, x, y, s, alpha);
+}
+
+/* État d'interface (séparé de l'état du jeu). */
+var UI = {
+  selected: null, targets: [], hover: null,
+  anims: [], effects: [], uiLock: false, handoffNote: '',
+  renderErrors: []
+};
+var G = newGame();
+
+/* Position affichée d'une pièce (interpolation des animations). */
+function pieceDrawPos(p, t, L){
+  for (var i = 0; i < UI.anims.length; i++){
+    var a = UI.anims[i];
+    if (a.type === 'move' && a.piece === p){
+      var k = Math.min(1, (t - a.start) / a.dur);
+      k = 1 - Math.pow(1 - k, 3);
+      var f = cellToPixel(a.from.q, a.from.r, L.size, L.cx, L.cy);
+      var d = cellToPixel(a.to.q, a.to.r, L.size, L.cx, L.cy);
+      return { x: f.x + (d.x - f.x) * k, y: f.y + (d.y - f.y) * k, k: k };
+    }
+  }
+  return cellToPixel(p.q, p.r, L.size, L.cx, L.cy);
+}
+
+function render(t){
+  resize();
+  ctx.setTransform(VIEW.dpr, 0, 0, VIEW.dpr, 0, 0);
+  ctx.clearRect(0, 0, VIEW.w, VIEW.h);
+
+  // fond + étoiles
+  ctx.fillStyle = vGrad(ctx, 0, VIEW.h, COL.nuit, '#0d2430'); ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+  var neb = ctx.createRadialGradient(VIEW.w / 2, VIEW.h * .42, 0, VIEW.w / 2, VIEW.h * .42, Math.max(VIEW.w, VIEW.h) * .62);
+  neb.addColorStop(0, 'rgba(22,66,78,.30)'); neb.addColorStop(1, 'rgba(10,26,32,0)');
+  ctx.fillStyle = neb; ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+  STARS.forEach(function(st){
+    ctx.globalAlpha = st.a * (0.75 + 0.25 * Math.sin(t * 1.7 + st.ph));
+    ctx.fillStyle = '#c8e7ea';
+    ctx.beginPath(); ctx.arc(st.x * VIEW.w, st.y * VIEW.h, st.r, 0, 7); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  if (G.phase === 'handoff'){ drawHeaderIcon(); syncDom(); return; }  // plateau masqué
+
+  var L = layout(), s = L.size;
+  var reveal = G.phase === 'over';
+  var joueur = viewerPlayer();
+  var vis = computeVision(G, joueur);
+  var ecl = isEclairTurn(G, joueur) && !reveal;
+
+  // cases
+  var tileImg = asset('common/case_hex', SQRT3 * s);
+  CELLS.forEach(function(c){
+    var P = cellToPixel(c.q, c.r, s, L.cx, L.cy);
+    var vu = reveal || vis[key(c.q, c.r)];
+    if (vu){
+      if (tileImg){
+        try { ctx.drawImage(tileImg, P.x - SQRT3 * s * .52, P.y - s * 1.02, SQRT3 * s * 1.04, s * 2.04); }
+        catch (e){ hexCell(P.x, P.y, s, false, ecl); }
+      } else hexCell(P.x, P.y, s, false, ecl);
+    } else {
+      hexCell(P.x, P.y, s, true, ecl);
+    }
+  });
+
+  // halo « lanterne » sous les pièces du joueur
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  G.pieces.forEach(function(p){
+    if (!p.alive || p.player !== joueur || reveal) return;
+    var P = cellToPixel(p.q, p.r, s, L.cx, L.cy);
+    var R = (p.type === 'phare' ? 3.1 : 2.15) * s;
+    var g = ctx.createRadialGradient(P.x, P.y, 0, P.x, P.y, R);
+    var c = p.player === 'azur' ? '110,200,255' : '255,145,102';
+    g.addColorStop(0, 'rgba(' + c + ',.10)'); g.addColorStop(1, 'rgba(' + c + ',0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(P.x, P.y, R, 0, 7); ctx.fill();
+  });
+  ctx.restore();
+
+  // survol
+  if (G.phase === 'playing' && UI.hover && !UI.uiLock){
+    var h = UI.hover, hv = cellToPixel(h.q, h.r, s, L.cx, L.cy);
+    var own = pieceAt(G, h.q, h.r);
+    var isTarget = UI.targets.some(function(tt){ return tt.q === h.q && tt.r === h.r; });
+    if ((own && own.player === G.turn) || isTarget){
+      hexPath(ctx, hv.x, hv.y, s * .92);
+      ctx.fillStyle = 'rgba(30,66,80,.85)'; ctx.fill();
+      ctx.strokeStyle = 'rgba(255,196,107,.55)'; ctx.lineWidth = 2; ctx.stroke();
+    }
+  }
+
+  // fantômes (souvenirs) du joueur courant
+  if (!reveal){
+    var mem = G.memories[joueur];
+    G.pieces.forEach(function(p){
+      if (!p.alive || p.player === joueur) return;
+      if (ecl || vis[key(p.q, p.r)]) return;               // vue en direct -> pas un fantôme
+      var m = mem[p.id];
+      if (!m) return;
+      var P = cellToPixel(m.q, m.r, s, L.cx, L.cy);
+      hexPath(ctx, P.x, P.y, s * .80);
+      ctx.setLineDash([4, 5]);
+      ctx.strokeStyle = 'rgba(255,196,107,.35)'; ctx.lineWidth = 1.4; ctx.stroke();
+      ctx.setLineDash([]);
+      drawPiece(ctx, p.type, p.player, P.x, P.y + .06 * s, s * .92, .34);
+      var fs = Math.max(9, s * .26);
+      ctx.font = '700 ' + fs + 'px system-ui,sans-serif';
+      ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+      ctx.fillStyle = 'rgba(255,196,107,.9)';
+      ctx.strokeStyle = 'rgba(4,12,17,.85)'; ctx.lineWidth = 3;
+      var label = 'T' + m.turn;
+      ctx.strokeText(label, P.x + s * .38, P.y - s * .72);
+      ctx.fillText(label, P.x + s * .38, P.y - s * .72);
+    });
+  }
+
+  // marqueurs de cibles
+  if (G.phase === 'playing' && UI.selected && !UI.uiLock){
+    UI.targets.forEach(function(tt){
+      var P = cellToPixel(tt.q, tt.r, s, L.cx, L.cy);
+      if (tt.capture){
+        hexPath(ctx, P.x, P.y, s * .66);
+        ctx.strokeStyle = COL.or; ctx.lineWidth = 2.6; ctx.stroke();
+        ctx.fillStyle = 'rgba(255,196,107,.95)';
+        ctx.beginPath(); ctx.arc(P.x, P.y, s * .12, 0, 7); ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(255,196,107,.65)';
+        ctx.beginPath(); ctx.arc(P.x, P.y, s * .13, 0, 7); ctx.fill();
+      }
+    });
+  }
+
+  // pièces
+  var captureAnims = UI.anims.filter(function(a){ return a.type === 'capture'; });
+  captureAnims.forEach(function(a){
+    var k = Math.min(1, (t - a.start) / a.dur);
+    if (k >= 1) return;
+    var P = cellToPixel(a.q, a.r, s, L.cx, L.cy);
+    drawPiece(ctx, a.victimType, a.victimPlayer, P.x, P.y - k * .18 * s, s * (1 - k * .5), (1 - k) * .9);
+  });
+  G.pieces.forEach(function(p){
+    if (!p.alive) return;
+    if (!reveal && p.player !== joueur && !ecl && !vis[key(p.q, p.r)]) return;
+    var pos = pieceDrawPos(p, t, L);
+    var lift = (UI.selected === p) ? -0.06 * s : 0;
+    drawPiece(ctx, p.type, p.player, pos.x, pos.y + lift, s);
+    if (UI.selected === p){
+      hexPath(ctx, pos.x, pos.y, s * .86);
+      ctx.strokeStyle = 'rgba(255,196,107,' + (.55 + .25 * Math.sin(t * 5)) + ')';
+      ctx.lineWidth = 2.6; ctx.stroke();
+    }
+    if (ecl && p.player !== joueur){
+      hexPath(ctx, pos.x, pos.y, s * (.84 + .03 * Math.sin(t * 6 + p.q)));
+      ctx.strokeStyle = 'rgba(255,196,107,' + (.5 + .3 * Math.sin(t * 6)) + ')';
+      ctx.lineWidth = 3; ctx.stroke();
+      boltPath(ctx, pos.x + s * .62, pos.y - s * 1.05, s * .55);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = 'rgba(255,217,146,.95)'; ctx.fill(); ctx.restore();
+    }
+  });
+
+  // flash d'éclair (plein plateau)
+  UI.effects.forEach(function(fx){
+    var k = (t - fx.start) / fx.dur;
+    if (k < 0 || k > 1) return;
+    ctx.fillStyle = 'rgba(255,196,107,' + (.24 * (1 - k)) + ')';
+    ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+  });
+
+  // vignettage discret
+  var vg = ctx.createRadialGradient(VIEW.w / 2, VIEW.h / 2, Math.min(VIEW.w, VIEW.h) * .38, VIEW.w / 2, VIEW.h / 2, Math.max(VIEW.w, VIEW.h) * .74);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(2,7,9,.36)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, VIEW.w, VIEW.h);
+
+  drawHeaderIcon();
+  syncDom();
+}
+
+function hexCell(x, y, s, fog, ecl){
+  hexPath(ctx, x, y, s * .96);
+  if (fog){
+    ctx.fillStyle = ecl ? '#081a20' : '#05131a';
+    ctx.fill();
+    ctx.strokeStyle = ecl ? 'rgba(255,196,107,.13)' : 'rgba(255,196,107,.055)';
+  } else {
+    var g = ctx.createLinearGradient(0, y - s, 0, y + s);
+    g.addColorStop(0, '#1b3c48'); g.addColorStop(1, '#142d37');
+    ctx.fillStyle = g; ctx.fill();
+    ctx.strokeStyle = '#2e5a66';
+  }
+  ctx.lineWidth = 1.1; ctx.stroke();
+}
+
+/* ---------- 6. Interface (DOM) ---------- */
+var el = {};
+function grab(id){ return document.getElementById(id); }
+
+function showToast(txt, kind){
+  var cont = el.toasts;
+  if (!cont) return;
+  while (cont.children.length >= 4) cont.removeChild(cont.firstChild);
+  var d = document.createElement('div');
+  d.className = 'toast' + (kind ? ' ' + kind : '');
+  d.textContent = txt;
+  cont.appendChild(d);
+  requestAnimationFrame(function(){ requestAnimationFrame(function(){ d.classList.add('on'); }); });
+  setTimeout(function(){
+    d.classList.remove('on');
+    setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 300);
+  }, 3200);
+}
+
+function setChip(){
+  var chip = el.chip, txt = el.chipTxt;
+  if (!chip) return;
+  chip.classList.remove('eclair');
+  if (G.phase === 'over'){
+    if (G.winner){
+      txt.textContent = 'Victoire de ' + NOM_J[G.winner];
+      chip.querySelector('.pion').style.background = COL[G.winner];
+      chip.style.color = COL[G.winner];
+    } else {
+      txt.textContent = 'Égalité';
+      chip.querySelector('.pion').style.background = COL.or;
+      chip.style.color = COL.or;
+    }
+    return;
+  }
+  chip.style.color = '';
+  chip.querySelector('.pion').style.background = COL[G.turn];
+  var suffixe = '';
+  if (MODE === 'ia' && G.turn === 'corail') suffixe = ' (IA)';
+  else if (MODE === 'enligne' && G.turn === NET.role) suffixe = ' (toi)';
+  var base = 'Au tour de ' + NOM_J[G.turn] + suffixe + ' · tour ' + G.counts[G.turn];
+  if (G.phase === 'playing' && G.counts[G.turn] % 4 === 0){ base += ' · ÉCLAIR'; chip.classList.add('eclair'); }
+  txt.textContent = base;
+}
+
+function setEclairInfo(){
+  var e = el.eclairInfo, bar = el.eclairbar;
+  if (!e) return;
+  var actif = G.phase === 'playing' && G.counts[G.turn] % 4 === 0;
+  if (actif){
+    bar.classList.add('actif');
+    if (viewerPlayer() === G.turn)
+      e.textContent = 'ÉCLAIR — toutes les pièces ennemies sont révélées ce tour.';
+    else
+      e.textContent = 'Éclair de ' + NOM_J[G.turn] + ' : ce joueur voit toutes les pièces adverses ce tour-ci.';
+    return;
+  }
+  bar.classList.remove('actif');
+  function next(p){ return 4 * (Math.floor(G.counts[p] / 4) + 1); }
+  e.textContent = 'Éclair d\u2019Azur : tour ' + next('azur') + ' · Éclair de Corail : tour ' + next('corail');
+}
+
+function drawHeaderIcon(){
+  if (!el.eclairIco || !el.eclairIco.getContext) return;
+  var c = el.eclairIco, dpr = 2;
+  if (c.width !== 20 * dpr){ c.width = 20 * dpr; c.height = 20 * dpr; }
+  var ic = c.getContext('2d');
+  if (!ic) return;
+  ic.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ic.clearRect(0, 0, 20, 20);
+  var img = asset('common/icone_eclair', 20);
+  if (img){ try { ic.drawImage(img, 0, 0, 20, 20); return; } catch (e){} }
+  boltPath(ic, 10, 10, 17);
+  ic.fillStyle = COL.or; ic.fill();
+}
+
+function syncDom(){
+  setChip(); setEclairInfo();
+  if (el.btnLeave) el.btnLeave.classList.toggle('hidden', MODE !== 'enligne');
+}
+
+function showHandoff(note){
+  UI.handoffNote = note || '';
+  el.handoffPlayer.textContent = NOM_J[G.turn].toUpperCase();
+  el.handoffPlayer.style.color = COL[G.turn];
+  var notes = [];
+  if (UI.handoffNote) notes.push(UI.handoffNote);
+  if ((G.counts[G.turn] + 1) % 4 === 0)
+    notes.push('Ton tour à venir est un ÉCLAIR : les pièces ennemies seront révélées.');
+  el.handoffNote.textContent = notes.join(' ');
+  el.handoff.classList.remove('hidden');
+}
+
+function hideHandoff(){ el.handoff.classList.add('hidden'); }
+
+function showVictory(){
+  if (G.winner){
+    el.vicTitle.textContent = 'VICTOIRE D\u2019' + NOM_J[G.winner].toUpperCase();
+    el.vicTitle.style.color = COL[G.winner];
+  } else {
+    el.vicTitle.textContent = 'ÉGALITÉ';
+    el.vicTitle.style.color = COL.or;
+  }
+  el.vicSub.textContent = G.vicReason || '';
+  el.victory.classList.remove('hidden');
+}
+
+function advanceHandoff(){
+  if (MODE !== 'hotseat' && MODE !== 'accueil') return;   // écran de passage : hotseat uniquement
+  if (G.phase !== 'handoff') return;
+  var ev = beginTurn(G);
+  var passNote = '';
+  for (var i = 0; i < ev.length; i++){
+    var e = ev[i];
+    if (e.type === 'eclair'){
+      UI.effects.push({ type:'flash', start: nowSec(), dur: .9 });
+      showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+    } else if (e.type === 'perte'){
+      showToast('Ton ' + (NOM_TYPE[e.pieceType] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
+    } else if (e.type === 'pass'){
+      passNote = NOM_J[e.player] + ' n\u2019a aucun coup légal : tour passé automatiquement.';
+    } else if (e.type === 'nulle'){
+      showVictory();
+      return;
+    }
+  }
+  if (G.phase === 'handoff'){ showHandoff(passNote); return; }
+  hideHandoff();
+  UI.uiLock = false;
+  UI.selected = null; UI.targets = [];
+}
+
+function newPartie(){
+  G = newGame();
+  UI.selected = null; UI.targets = []; UI.hover = null;
+  UI.anims = []; UI.effects = []; UI.uiLock = false;
+  el.victory.classList.add('hidden');
+  hideHandoff();
+  showHandoff('La partie commence. ' + NOM_J[G.turn] + ' joue en premier.');
+}
+
+function performMove(piece, tq, tr){
+  var res = attemptMove(G, piece.id, tq, tr);
+  if (!res.ok){ UI.selected = null; UI.targets = []; return; }
+  animerEtContinuer(res, piece);
+}
+
+/* Applique un coup résolu : animations, toasts, puis continuation selon le mode.
+   Comportement hotseat strictement identique à l'original (endTurn + passage). */
+function animerEtContinuer(res, piece){
+  updateMemory(G, piece.player);
+  var t0 = nowSec();
+  UI.anims.push({ type:'move', piece:piece, from:res.from, to:res.to, start:t0, dur:.24 });
+  /* Honnêteté : si le spectateur n'est pas le joueur qui bouge (IA, adversaire
+     en ligne), ne jamais animer une trajectoire sortie du brouillard. */
+  if (piece.player !== viewerPlayer()){
+    var visV = computeVision(G, viewerPlayer());
+    var a = UI.anims[UI.anims.length - 1];
+    if (!visV[key(a.from.q, a.from.r)] || !visV[key(a.to.q, a.to.r)]) a.from = { q:a.to.q, r:a.to.r };
+  }
+  if (res.capture){
+    UI.anims.push({ type:'capture', victimType:res.capture.type, victimPlayer:res.capture.player,
+                    q:res.capture.q, r:res.capture.r, start:t0 + .06, dur:.5 });
+  }
+  res.events.forEach(function(e){
+    if (e.type === 'surprise'){
+      showToast('Capture surprise !', 'surprise');
+      showToast(NOM_TYPE[e.victime.type] + ' ' + NOM_J[e.victime.player] + ' capturé.');
+    } else if (e.type === 'capture'){
+      showToast(NOM_TYPE[e.victime.type] + ' ' + NOM_J[e.victime.player] + ' capturé.');
+    } else if (e.type === 'phare'){
+      showToast('Le Phare ' + NOM_J[res.capture.player] + ' est tombé !', 'eclair');
+    }
+  });
+  UI.selected = null; UI.targets = [];
+  UI.uiLock = true;
+  var gagnant = G.winner;
+  setTimeout(function(){
+    if (gagnant){
+      if (MODE === 'enligne' && NET.role === 'azur'){
+        var evs = [];
+        res.events.forEach(function(e){ var ev = encoderEvent(e); if (ev) evs.push(ev); });
+        envoyerVueCorail(evs, dernierEnc(res, piece.player), { v:G.winner, r:G.vicReason });
+        envoyerFin(G.winner, G.vicReason);
+      }
+      showVictory();
+      return;
+    }
+    endTurn(G);
+    if (MODE === 'hotseat' || MODE === 'accueil'){ showHandoff(''); return; }
+    if (MODE === 'ia'){ if (G.turn === 'corail') aiTour(); else tourHumainIA(); return; }
+    if (MODE === 'enligne' && NET.role === 'azur'){ onlineAvance(res, piece.player); return; }
+  }, 1000);
+}
+
+function onCanvasClick(px, py){
+  if (G.phase !== 'playing' || UI.uiLock) return;
+  if (viewerPlayer() !== G.turn) return;   // spectateur : IA ou adversaire en ligne
+  var L = layout();
+  var c = pixelToCell(px, py, L.size, L.cx, L.cy);
+  if (!inBoard(c.q, c.r)){ UI.selected = null; UI.targets = []; return; }
+  var p = pieceAt(G, c.q, c.r);
+  if (p && p.player === G.turn && p.alive){
+    if (UI.selected === p){ UI.selected = null; UI.targets = []; }
+    else { UI.selected = p; UI.targets = legalTargets(G, p); }
+    return;
+  }
+  if (UI.selected){
+    var ok = UI.targets.some(function(t){ return t.q === c.q && t.r === c.r; });
+    if (ok){
+      var pieceChoisie = UI.selected;
+      if (MODE === 'enligne' && NET.role === 'corail') netEnvoyerCoup(pieceChoisie, c.q, c.r);
+      else performMove(pieceChoisie, c.q, c.r);
+      return;
+    }
+  }
+  UI.selected = null; UI.targets = [];
+}
+
+function onCanvasMove(px, py){
+  if (G.phase !== 'playing' || UI.uiLock || viewerPlayer() !== G.turn){ cv.style.cursor = 'default'; return; }
+  var L = layout();
+  var c = pixelToCell(px, py, L.size, L.cx, L.cy);
+  if (!inBoard(c.q, c.r)){ UI.hover = null; cv.style.cursor = 'default'; return; }
+  UI.hover = c;
+  var p = pieceAt(G, c.q, c.r);
+  var isTarget = UI.targets.some(function(t){ return t.q === c.q && t.r === c.r; });
+  cv.style.cursor = (p && p.player === G.turn) || isTarget ? 'pointer' : 'default';
+}
+
+function nowSec(){
+  return (typeof performance !== 'undefined' && performance.now) ? performance.now() / 1000 : Date.now() / 1000;
+}
+
+/* ---------- 7. Boucle ---------- */
+var lastFrame = 0;
+function frame(ts){
+  var t = ts / 1000;
+  UI.anims = UI.anims.filter(function(a){ return t - a.start < a.dur + .05; });
+  UI.effects = UI.effects.filter(function(fx){ return t - fx.start < fx.dur; });
+  try { render(t); } catch (e) { UI.renderErrors.push(String((e && e.stack) || e)); }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- 7bis. Modes : accueil, IA honnête, salon LOB7 ---------- */
+var MODE = 'accueil';            // accueil | hotseat | ia | enligne
+var IA_LVL = 'normal';
+
+var NET_FATALES = ['ROOM_EXPIRED','ROOM_NOT_FOUND','RELEASE_NOT_FOUND','ACCOUNT_SUSPENDED',
+  'GAME_NOT_ALLOWED','SCOPE_REQUIRED','AUTH_INVALID','AUTH_REQUIRED','ROOM_CONNECTION_CLOSED','ROOM_CHANGED'];
+function netVierge(){
+  return { conn:null, clientId:'', role:null, partenaire:null, candidat:null,
+           pid:0, cleSeq:0, clesTraitees:{}, stopSub:null, fastTimer:null,
+           fastBusy:false, lastSeq:0, derniereVue:null };
+}
+var NET = netVierge();
+
+/* Le joueur dont on dessine la vue : soi-même en IA / en ligne, le courant en hotseat. */
+function viewerPlayer(){
+  if (MODE === 'ia') return 'azur';
+  if (MODE === 'enligne') return NET.role || 'azur';
+  return G.turn;
+}
+function pieceById(Gx, id){
+  for (var i = 0; i < Gx.pieces.length; i++) if (Gx.pieces[i].id === id) return Gx.pieces[i];
+  return null;
+}
+function resetUIState(){
+  UI.selected = null; UI.targets = []; UI.hover = null;
+  UI.anims = []; UI.effects = []; UI.uiLock = false;
+  el.victory.classList.add('hidden');
+  hideHandoff();
+  el.lobby.classList.add('hidden');
+  el.perdue.classList.add('hidden');
+}
+
+/* ====== IA (Corail) — HONNÊTE ======
+   Elle ne consulte QUE : computeVision(G,'corail'), isEclairTurn(G,'corail'),
+   G.memories.corail et legalTargets(G, p) — exactement les mêmes canaux
+   qu'un joueur humain. Jamais les positions réelles d'Azur si cachées. */
+var IA_VALEUR = { phare:100000, lancier:320, garde:230 };
+
+function iaCandidats(Gx){
+  var out = [];
+  Gx.pieces.forEach(function(p){
+    if (!p.alive || p.player !== 'corail') return;
+    legalTargets(Gx, p).forEach(function(t){ out.push({ piece:p, q:t.q, r:t.r, capture:t.capture }); });
+  });
+  return out;
+}
+
+/* Menace pesant sur (q,r) d'après les CONNAISSANCES de l'IA uniquement
+   (ennemis visibles maintenant ou pendant son éclair, ou en souvenir). */
+function iaMenace(Gx, vue, q, r){
+  var total = 0;
+  Gx.pieces.forEach(function(e){
+    if (!e.alive || e.player !== 'azur') return;
+    var pos = null;
+    if (vue.ecl || vue.vis[key(e.q, e.r)]) pos = { q:e.q, r:e.r };
+    else if (vue.mem[e.id]) pos = vue.mem[e.id];
+    if (!pos) return;
+    var dq = q - pos.q, dr = r - pos.r;
+    if (dq === 0 && dr === 0){ total += .5; return; }
+    for (var i = 0; i < 6; i++){
+      var d = DIRS[i];
+      if (dq * d[1] - dr * d[0] !== 0) continue;
+      var dot = dq * d[0] + dr * d[1];
+      var n = dot / (d[0] * d[0] + d[1] * d[1]);
+      if (dot > 0 && n === Math.round(n) && n <= RANGE[e.type]){
+        total += (e.type === 'lancier' ? 1.5 : e.type === 'garde' ? 1.2 : .8);
+        break;
+      }
+    }
+  });
+  return total;
+}
+
+function iaScoreCoup(Gx, c, vue){
+  var p = c.piece;
+  var s = Math.random() * 6;                             // bruit léger : variété
+  if (c.capture){                                        // 1) capture VISIBLE (Phare > Lancier > Garde)
+    var v = pieceAt(Gx, c.q, c.r);
+    if (v) s += IA_VALEUR[v.type] || 250;
+  }
+  var memPhare = null, plusProche = null, dPlus = 1e9;   // 2) avancer vers les souvenirs ennemis
+  Object.keys(vue.mem).forEach(function(id){
+    var m = vue.mem[id], pc = pieceById(Gx, id);
+    if (!pc) return;
+    if (pc.type === 'phare') memPhare = m;
+    var d = hexDist(c.q, c.r, m.q, m.r);
+    if (d < dPlus){ dPlus = d; plusProche = m; }
+  });
+  function gainVers(m){ return m ? (hexDist(p.q, p.r, m.q, m.r) - hexDist(c.q, c.r, m.q, m.r)) : 0; }
+  if (memPhare) s += 26 * gainVers(memPhare);
+  else if (plusProche) s += 18 * gainVers(plusProche);
+  else s += 5 * (c.r - p.r);                             // sinon : avancer vers le camp adverse
+  var phare = null;                                      // 3) sécurité du Phare
+  Gx.pieces.forEach(function(x){ if (x.alive && x.player === 'corail' && x.type === 'phare') phare = x; });
+  if (phare){
+    if (p.type === 'phare'){
+      s += 55 * (iaMenace(Gx, vue, phare.q, phare.r) - iaMenace(Gx, vue, c.q, c.r)) - 8;
+    } else {
+      var menace = iaMenace(Gx, vue, phare.q, phare.r);
+      if (menace > 0)
+        s += 16 * menace * (hexDist(p.q, p.r, phare.q, phare.r) - hexDist(c.q, c.r, phare.q, phare.r));
+    }
+  }
+  var gain = 0;                                          // 4) exploration du brouillard
+  if (!vue.vis[key(c.q, c.r)]) gain++;
+  for (var i = 0; i < 6; i++){
+    var nq = c.q + DIRS[i][0], nr = c.r + DIRS[i][1];
+    if (inBoard(nq, nr) && !vue.vis[key(nq, nr)]) gain++;
+  }
+  s += 7 * gain;
+  return s;
+}
+
+function iaChoisirCoup(Gx, niveau){
+  var cands = iaCandidats(Gx);
+  if (!cands.length) return null;
+  if (niveau === 'facile' && Math.random() < 0.6)        // ~60 % aléatoire légal
+    return cands[Math.floor(Math.random() * cands.length)];
+  var vue = { vis: computeVision(Gx, 'corail'), ecl: isEclairTurn(Gx, 'corail'), mem: Gx.memories.corail };
+  var best = null, bestS = -Infinity;
+  cands.forEach(function(c){
+    var s = iaScoreCoup(Gx, c, vue);
+    if (s > bestS){ bestS = s; best = c; }
+  });
+  return best;
+}
+
+function toastEvenement(e){
+  if (e.type === 'eclair'){
+    UI.effects.push({ type:'flash', start: nowSec(), dur:.9 });
+    showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+  } else if (e.type === 'perte'){
+    showToast('Ton ' + (NOM_TYPE[e.pieceType] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
+  } else if (e.type === 'pass'){
+    showToast(NOM_J[e.player] + ' n\u2019a aucun coup légal : tour passé automatiquement.');
+  }
+}
+
+/* Tour de l'humain (Azur) en mode IA : comme advanceHandoff, sans écran de passage. */
+function tourHumainIA(){
+  if (G.phase === 'over'){ showVictory(); return; }
+  var ev = beginTurn(G);
+  for (var i = 0; i < ev.length; i++){
+    if (ev[i].type === 'nulle'){ showVictory(); return; }
+    toastEvenement(ev[i]);
+  }
+  if (G.phase === 'over'){ showVictory(); return; }
+  if (G.phase === 'handoff'){ aiTour(); return; }        // Azur n'a aucun coup légal
+  UI.uiLock = false; UI.selected = null; UI.targets = [];
+}
+
+function aiTour(){
+  if (MODE !== 'ia') return;
+  UI.uiLock = true; UI.selected = null; UI.targets = [];
+  var ev = beginTurn(G);
+  for (var i = 0; i < ev.length; i++){
+    var e = ev[i];
+    if (e.type === 'nulle'){ showVictory(); return; }
+    if (e.type === 'eclair') showToast('Éclair de l\u2019IA — Corail voit tes pièces ce tour-ci.', 'eclair');
+    else if (e.type === 'pass') showToast('Corail (IA) n\u2019a aucun coup légal : tour passé.');
+  }
+  if (G.phase === 'over'){ showVictory(); return; }
+  if (G.phase === 'handoff'){ tourHumainIA(); return; }  // l'IA n'a aucun coup légal
+  showToast('L\u2019IA réfléchit…');
+  setTimeout(function(){
+    if (MODE !== 'ia' || G.phase !== 'playing' || G.turn !== 'corail') return;
+    var mv = iaChoisirCoup(G, IA_LVL);
+    if (!mv){ endTurn(G); tourHumainIA(); return; }      // défensif
+    performMove(mv.piece, mv.q, mv.r);
+  }, 800 + Math.floor(Math.random() * 400));
+}
+
+function demarrerIA(niveau){
+  if (niveau) IA_LVL = niveau;
+  MODE = 'ia';
+  el.accueil.classList.add('hidden');
+  el.niveaux.classList.add('hidden');
+  resetUIState();
+  G = newGame();
+  showToast('Tu joues AZUR — l\u2019IA ' + (IA_LVL === 'facile' ? 'facile' : 'normale') + ' joue CORAIL.');
+  tourHumainIA();
+}
+
+/* ====== Salon LOB7 (en ligne) ====== */
+function netFatal(err){ return !!(err && NET_FATALES.indexOf(err.code) !== -1); }
+function envoyer(msg){
+  if (!NET.conn) return;
+  try {
+    NET.conn.send(msg).catch(function(err){
+      if (netFatal(err)) salonPerdu('L\u2019envoi vers le salon a échoué.');
+      else if (msg && msg.type === 'action'){
+        showToast('Envoi du coup échoué — réessaie.');
+        if (G.phase === 'playing' && G.turn === 'corail' && NET.role === 'corail') UI.uiLock = false;
+      }
+    });
+  } catch(e){}
+}
+/* Lecture rapide : complète l'abonnement (poll 3-15 s du SDK) pour une latence
+   de jeu correcte ; dédoublonnage par numéro de séquence dans surMessageSalon. */
+function lectureRapide(){
+  if (!NET.conn || NET.fastBusy) return;
+  NET.fastBusy = true;
+  NET.conn.read({ after: NET.lastSeq, limit: 50 }).then(function(batch){
+    NET.fastBusy = false;
+    ((batch && batch.messages) || []).forEach(surMessageSalon);
+  }).catch(function(err){
+    NET.fastBusy = false;
+    if (netFatal(err)) salonPerdu('La lecture du salon a échoué.');
+  });
+}
+function demarrerLectureRapide(){
+  if (!NET.fastTimer) NET.fastTimer = setInterval(lectureRapide, 800);
+}
+function arreterLectureRapide(){
+  if (NET.fastTimer){ clearInterval(NET.fastTimer); NET.fastTimer = null; }
+  NET.fastBusy = false;
+}
+
+/* Toute la messagerie du salon passe ici ; ne doit jamais lever (boucle SDK). */
+function surMessageSalon(msg){
+  try {
+    if (!msg || typeof msg !== 'object') return;
+    if (Number.isSafeInteger(msg.sequence)){
+      if (msg.sequence <= NET.lastSeq) return;
+      NET.lastSeq = msg.sequence;
+    }
+    var m = msg.data;
+    if (!m || typeof m !== 'object' || m.de === NET.clientId) return;
+    if (m.type === 'hello') surHello(m);
+    else if (m.type === 'vue'){ if (NET.role === 'corail' && m.pour === 'corail' && m.de === NET.partenaire) surVue(m); }
+    else if (m.type === 'action'){ if (NET.role === 'azur') surAction(m); }
+    else if (m.type === 'refus'){ if (NET.role === 'corail' && m.de === NET.partenaire) surRefus(m); }
+    else if (m.type === 'fin'){ if (NET.role === 'corail' && m.de === NET.partenaire) surFin(m); }
+    else if (m.type === 'quit'){
+      if (NET.partenaire && m.de === NET.partenaire) salonPerdu('L\u2019adversaire a quitté le salon.');
+    }
+  } catch(e){ /* ne jamais casser la boucle d'abonnement */
+    if (typeof globalThis !== 'undefined') globalThis.__BRUME_SALON_ERR = String((e && e.stack) || e);
+  }
+}
+
+/* Élection déterministe : le plus petit clientId (comparaison de chaînes) = Azur. */
+function surHello(m){
+  if (MODE !== 'enligne' || NET.partenaire) return;
+  if (typeof m.clientId !== 'string' || !m.clientId || m.clientId === NET.clientId) return;
+  var ts = typeof m.ts === 'number' ? m.ts : 0;
+  if (ts && Math.abs(Date.now() - ts) > 90000) return;   // hello périmé (salon réutilisé)
+  if (!NET.candidat || ts > NET.candidat.ts ||
+      (ts === NET.candidat.ts && m.clientId < NET.candidat.id))
+    NET.candidat = { id: m.clientId, ts: ts };
+  NET.partenaire = NET.candidat.id;
+  NET.role = (NET.clientId < NET.partenaire) ? 'azur' : 'corail';
+  lancerPartieEnLigne();
+}
+
+function tentativeEnLigne(){
+  el.accueilMsg.classList.add('hidden');
+  MODE = 'enligne';
+  NET = netVierge();
+  el.lobby.classList.remove('hidden');
+  lobbyMsg('Connexion au salon LOB7…');
+  var sdk = globalThis.LOB7Rooms;
+  if (!sdk || typeof sdk.connect !== 'function'){ echecEnLigne(); return; }
+  sdk.connect().then(function(conn){
+    if (MODE !== 'enligne') return;                      // annulé entre-temps
+    NET.conn = conn;
+    var octets = new Uint8Array(8);
+    globalThis.crypto.getRandomValues(octets);
+    NET.clientId = Array.from(octets, function(b){ return b.toString(16).padStart(2, '0'); }).join('');
+    envoyer({ type:'hello', de: NET.clientId, clientId: NET.clientId, ts: Date.now() });
+    try {
+      NET.stopSub = conn.subscribe(surMessageSalon, {
+        after: 0,
+        onError: function(err){ if (netFatal(err)) salonPerdu('Le salon LOB7 s\u2019est fermé.'); }
+      });
+    } catch(e){ salonPerdu('Impossible de suivre le salon.'); return; }
+    demarrerLectureRapide();
+    lobbyMsg('Salon rejoint. En attente du second joueur…');
+    setTimeout(function(){
+      if (MODE === 'enligne' && !NET.partenaire){
+        lobbyMsg('En attente du second joueur… Ouvre ce même salon dans un second lecteur LOB7.');
+        lectureRapide();
+      }
+    }, 8000);
+  }).catch(function(){
+    if (MODE === 'enligne') echecEnLigne();
+  });
+}
+function echecEnLigne(){
+  arreterLectureRapide();
+  NET = netVierge();
+  MODE = 'accueil';
+  el.lobby.classList.add('hidden');
+  el.perdue.classList.add('hidden');
+  el.accueil.classList.remove('hidden');
+  el.accueilMsg.textContent = 'Le mode en ligne nécessite lob7.com — choisis un autre mode.';
+  el.accueilMsg.classList.remove('hidden');
+}
+function lobbyMsg(t){ el.lobbyMsg.textContent = t; }
+
+function lancerPartieEnLigne(){
+  el.accueil.classList.add('hidden');
+  NET.pid = (NET.role === 'azur') ? 1 : 0;   // Corail détecte la 1re vue via le changement de pid
+  NET.clesTraitees = {};
+  NET.derniereVue = null;
+  resetUIState();
+  if (NET.role === 'azur'){
+    G = newGame();
+    showToast('Tu es AZUR — hôte et arbitre de la partie. À toi de jouer.');
+    onlineAvance(null, null);
+  } else {
+    G = newGame();
+    UI.uiLock = true;
+    el.lobby.classList.remove('hidden');
+    lobbyMsg('Tu es CORAIL — en attente de la vue de l\u2019hôte (Azur)…');
+  }
+}
+
+/* --- sérialisation compacte de la vue de Corail (≤ 8192 octets ;
+     JAMAIS l'état complet ni la vue d'Azur : le salon est un flux commun). --- */
+var CODE_T = { phare:'p', garde:'g', lancier:'l' };
+var DECODE_T = { p:'phare', g:'garde', l:'lancier' };
+function vueCorailPayload(Gx, evs, der, fin, pid){
+  var vis = computeVision(Gx, 'corail');
+  var ecl = isEclairTurn(Gx, 'corail');
+  var pieces = [], ennemis = [], mem = [];
+  Gx.pieces.forEach(function(p){
+    if (!p.alive) return;
+    if (p.player === 'corail') pieces.push([p.id, CODE_T[p.type], p.q, p.r]);
+    else if (ecl || vis[key(p.q, p.r)]) ennemis.push([p.id, CODE_T[p.type], p.q, p.r]);
+  });
+  Object.keys(Gx.memories.corail).forEach(function(id){
+    var m = Gx.memories.corail[id], pc = pieceById(Gx, id);
+    if (pc) mem.push([id, CODE_T[pc.type], m.q, m.r, m.turn]);
+  });
+  return { pid: pid,
+           tour: Gx.turn, phase: Gx.phase === 'over' ? 'over' : 'playing',
+           counts: [Gx.counts.azur, Gx.counts.corail],
+           pieces: pieces, ennemis: ennemis, mem: mem,
+           evs: evs || [], der: der || null, fin: fin || null };
+}
+function envoyerVueCorail(evs, der, fin){
+  if (NET.role !== 'azur' || !NET.conn) return;
+  NET.derniereVue = vueCorailPayload(G, evs, der, fin, NET.pid);
+  envoyer({ type:'vue', de: NET.clientId, pour:'corail', payload: NET.derniereVue });
+}
+function envoyerFin(vainqueur, raison){
+  envoyer({ type:'fin', de: NET.clientId, v: vainqueur || null, r: raison || '' });
+}
+function encoderEvent(e){
+  if (e.type === 'eclair') return ['ecl'];
+  if (e.type === 'perte') return ['perte', e.pieceType];
+  if (e.type === 'pass') return ['pass', e.player];
+  if (e.type === 'nulle') return ['nulle'];
+  if (e.type === 'surprise' || e.type === 'capture') return [e.type, e.victime.type, e.victime.player];
+  if (e.type === 'phare') return ['phare', opp(e.winner)];
+  return null;
+}
+function dernierEnc(res, mover){
+  if (!res || mover !== 'corail' || !res.events || !res.events[0]) return null;
+  var e0 = res.events[0];
+  return { i: e0.piece.id, f: [e0.from.q, e0.from.r], t: [e0.to.q, e0.to.r] };
+}
+
+/* Arbitre (Azur) : fait tourner beginTurn (passes, éclairs, nulle) et diffuse
+   à Corail SA vue filtrée — calculée par le même code de brouillard que le hotseat. */
+function onlineAvance(resDernier, mover){
+  if (MODE !== 'enligne' || NET.role !== 'azur') return;
+  var evs = [];
+  if (resDernier && mover === 'corail'){
+    resDernier.events.forEach(function(e){ var ev = encoderEvent(e); if (ev) evs.push(ev); });
+  }
+  while (G.phase === 'handoff'){
+    var j = G.turn;
+    var batch = beginTurn(G);
+    for (var i = 0; i < batch.length; i++){
+      if (batch[i].type === 'nulle') continue;           // fin traitée ci-dessous
+      if (j === 'corail'){ var evc = encoderEvent(batch[i]); if (evc) evs.push(evc); }
+      else toastEvenement(batch[i]);
+    }
+    if (G.phase === 'over') break;
+  }
+  if (G.phase === 'over'){
+    envoyerVueCorail(evs, dernierEnc(resDernier, mover), { v: G.winner, r: G.vicReason });
+    envoyerFin(G.winner, G.vicReason);
+    showVictory();
+    return;
+  }
+  envoyerVueCorail(evs, dernierEnc(resDernier, mover), null);
+  if (G.turn === 'corail'){
+    UI.uiLock = true; UI.selected = null; UI.targets = [];
+    showToast('Au tour de Corail — attente de son coup…');
+  } else {
+    UI.uiLock = false;
+  }
+}
+
+function surAction(m){
+  if (m.de !== NET.partenaire || !m.coup || typeof m.coup.i !== 'string') return;
+  if (NET.clesTraitees[m.cle]){                          // idempotence
+    if (NET.derniereVue) envoyer({ type:'vue', de: NET.clientId, pour:'corail', payload: NET.derniereVue });
+    return;
+  }
+  NET.clesTraitees[m.cle] = true;
+  if (G.phase !== 'playing' || G.turn !== 'corail'){
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'ce n\u2019est pas le tour de Corail' });
+    return;
+  }
+  var piece = pieceById(G, m.coup.i);
+  if (!piece || !piece.alive || piece.player !== 'corail'){
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'pièce inconnue' });
+    return;
+  }
+  var res = attemptMove(G, piece.id, m.coup.q, m.coup.r);
+  if (!res.ok){
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'coup illégal (' + res.reason + ')' });
+    return;
+  }
+  animerEtContinuer(res, piece);   // animations filtrées par la vue d'Azur, puis onlineAvance
+}
+
+/* Côté Corail : reconstruit un état-ombre NE CONTENANT QUE sa vue filtrée,
+   puis le rendu passe par les mêmes fonctions (computeVision, fantômes…). */
+function surVue(m){
+  var pl = m.payload;
+  if (!pl || !pl.pieces) return;   // l'enveloppe (type/pour/de) est déjà validée par surMessageSalon
+  if (pl.pid !== NET.pid){
+    NET.pid = pl.pid;
+    resetUIState();
+    showToast('La partie en ligne commence !');
+  }
+  var pieces = [], vus = {};
+  (pl.pieces || []).forEach(function(o){
+    pieces.push({ id:o[0], type:DECODE_T[o[1]], player:'corail', q:o[2], r:o[3], alive:true });
+  });
+  (pl.ennemis || []).forEach(function(o){
+    vus[o[0]] = true;
+    pieces.push({ id:o[0], type:DECODE_T[o[1]], player:'azur', q:o[2], r:o[3], alive:true });
+  });
+  var mem = {};
+  (pl.mem || []).forEach(function(o){
+    mem[o[0]] = { q:o[2], r:o[3], turn:o[4] };
+    if (!vus[o[0]]) pieces.push({ id:o[0], type:DECODE_T[o[1]], player:'azur', q:o[2], r:o[3], alive:true });
+  });
+  G = { pieces: pieces, turn: pl.tour,
+        counts: { azur: pl.counts ? pl.counts[0] : 0, corail: pl.counts ? pl.counts[1] : 0 },
+        memories: { corail: mem, azur: {} },
+        lastCapture: null, passStreak: 0,
+        phase: pl.fin ? 'over' : 'playing',
+        winner: pl.fin ? pl.fin.v : null, vicReason: pl.fin ? pl.fin.r : '' };
+  if (pl.der){
+    var pc = pieceById(G, pl.der.i);
+    if (pc) UI.anims.push({ type:'move', piece:pc, from:{ q:pl.der.f[0], r:pl.der.f[1] },
+                            to:{ q:pl.der.t[0], r:pl.der.t[1] }, start:nowSec(), dur:.24 });
+  }
+  (pl.evs || []).forEach(toastEventEncode);
+  UI.selected = null; UI.targets = [];
+  if (G.phase === 'over'){ UI.uiLock = true; showVictory(); return; }
+  UI.uiLock = !(G.turn === 'corail');
+}
+function toastEventEncode(ev){
+  if (!ev || !ev.length) return;
+  var t = ev[0];
+  if (t === 'ecl'){
+    UI.effects.push({ type:'flash', start: nowSec(), dur:.9 });
+    showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+  }
+  else if (t === 'perte') showToast('Ton ' + (NOM_TYPE[ev[1]] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
+  else if (t === 'pass') showToast(NOM_J[ev[1]] + ' n\u2019a aucun coup légal : tour passé automatiquement.');
+  else if (t === 'surprise'){ showToast('Capture surprise !', 'surprise'); showToast(NOM_TYPE[ev[1]] + ' ' + NOM_J[ev[2]] + ' capturé.'); }
+  else if (t === 'capture') showToast(NOM_TYPE[ev[1]] + ' ' + NOM_J[ev[2]] + ' capturé.');
+  else if (t === 'phare') showToast('Le Phare ' + NOM_J[ev[1]] + ' est tombé !', 'eclair');
+}
+function surRefus(m){
+  showToast('Coup refusé par l\u2019hôte : ' + (m.raison || 'raison inconnue') + ' — rejoue.');
+  if (G.phase === 'playing' && G.turn === 'corail') UI.uiLock = false;
+}
+function surFin(m){
+  if (MODE !== 'enligne' || NET.role !== 'corail') return;
+  if (G.phase === 'over') return;
+  G.phase = 'over'; G.winner = m.v || null; G.vicReason = m.r || '';
+  UI.uiLock = true;
+  showVictory();
+}
+function netEnvoyerCoup(piece, q, r){
+  if (MODE !== 'enligne' || NET.role !== 'corail' || UI.uiLock) return;
+  NET.cleSeq++;
+  var cle = NET.clientId.slice(0, 8) + '-' + NET.cleSeq;
+  UI.uiLock = true; UI.selected = null; UI.targets = [];
+  showToast('Coup transmis — validation par l\u2019hôte…');
+  envoyer({ type:'action', de: NET.clientId, cle: cle, coup: { i: piece.id, q: q, r: r } });
+}
+function salonPerdu(message){
+  if (MODE !== 'enligne' || !NET.conn) return;
+  arreterLectureRapide();
+  if (NET.stopSub){ try { NET.stopSub(); } catch(e){} NET.stopSub = null; }
+  NET.conn = null;
+  el.perdueMsg.textContent = message || 'Le salon LOB7 n\u2019est plus disponible.';
+  el.perdue.classList.remove('hidden');
+}
+function quitterSalon(){
+  if (MODE === 'enligne' && NET.conn) envoyer({ type:'quit', de: NET.clientId });
+  arreterLectureRapide();
+  if (NET.stopSub){ try { NET.stopSub(); } catch(e){} }
+  NET = netVierge();
+  MODE = 'accueil';
+  el.accueilMsg.classList.add('hidden');
+  el.niveaux.classList.add('hidden');
+  resetUIState();
+  G = newGame();
+  el.accueil.classList.remove('hidden');
+}
+function relancer(){
+  if (MODE === 'ia'){ demarrerIA(IA_LVL); return; }
+  if (MODE === 'enligne'){
+    if (NET.role === 'azur'){
+      NET.pid++;
+      NET.clesTraitees = {};
+      NET.derniereVue = null;
+      resetUIState();
+      G = newGame();
+      onlineAvance(null, null);
+    } else showToast('En ligne, seul l\u2019hôte (Azur) peut relancer une partie.');
+    return;
+  }
+  newPartie();
+}
+
+/* ---------- 8. Boot + export (tests) ---------- */
+function boot(){
+  cv = grab('board'); ctx = cv.getContext('2d');
+  wrap = grab('board-wrap');
+  el.chip = grab('turnchip'); el.chipTxt = grab('turnchip-txt');
+  el.eclairIco = grab('eclair-ico'); el.eclairInfo = grab('eclair-info'); el.eclairbar = grab('eclairbar');
+  el.toasts = grab('toasts');
+  el.handoff = grab('handoff'); el.handoffPlayer = grab('handoff-player'); el.handoffNote = grab('handoff-note');
+  el.victory = grab('victory'); el.vicTitle = grab('vic-title'); el.vicSub = grab('vic-sub');
+  el.accueil = grab('accueil'); el.accueilMsg = grab('accueil-msg');
+  el.lobby = grab('lobby'); el.lobbyMsg = grab('lobby-msg');
+  el.perdue = grab('perdue'); el.perdueMsg = grab('perdue-msg');
+  el.niveaux = grab('niveaux'); el.btnLeave = grab('btn-leave');
+
+  cv.addEventListener('click', function(ev){
+    var r = cv.getBoundingClientRect();
+    onCanvasClick(ev.clientX - r.left, ev.clientY - r.top);
+  });
+  cv.addEventListener('mousemove', function(ev){
+    var r = cv.getBoundingClientRect();
+    onCanvasMove(ev.clientX - r.left, ev.clientY - r.top);
+  });
+  cv.addEventListener('mouseleave', function(){ UI.hover = null; });
+
+  el.handoff.addEventListener('click', advanceHandoff);
+  window.addEventListener('keydown', function(ev){
+    if (ev.key === 'Enter' && MODE === 'hotseat' && G.phase === 'handoff') advanceHandoff();
+    if (ev.key === 'Escape') el.rules.classList.add('hidden');
+  });
+  grab('btn-new').addEventListener('click', relancer);
+  grab('btn-replay').addEventListener('click', relancer);
+  grab('btn-inspect').addEventListener('click', function(){ el.victory.classList.add('hidden'); });
+  grab('btn-rules').addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
+  grab('btn-rules-close').addEventListener('click', function(){ el.rules.classList.add('hidden'); });
+  el.rules = grab('rules');
+
+  grab('m-hotseat').addEventListener('click', function(){
+    MODE = 'hotseat';
+    el.niveaux.classList.add('hidden');
+    el.accueil.classList.add('hidden');
+    newPartie();
+  });
+  grab('m-ia').addEventListener('click', function(){ el.niveaux.classList.toggle('hidden'); });
+  grab('m-ia-facile').addEventListener('click', function(){ demarrerIA('facile'); });
+  grab('m-ia-normal').addEventListener('click', function(){ demarrerIA('normal'); });
+  grab('m-online').addEventListener('click', tentativeEnLigne);
+  grab('btn-accueil-rules').addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
+  grab('btn-lobby-cancel').addEventListener('click', quitterSalon);
+  grab('btn-perdue-retour').addEventListener('click', quitterSalon);
+  el.btnLeave.addEventListener('click', quitterSalon);
+
+  window.addEventListener('resize', resize);
+  Assets.init();
+  resize();
+  requestAnimationFrame(frame);   // l'accueil attend le choix du mode : pas de newPartie() ici
+}
+
+globalThis.BRUME = {
+  // logique pure
+  newGame: newGame, pieceAt: pieceAt, computeVision: computeVision, isEclairTurn: isEclairTurn,
+  updateMemory: updateMemory, legalTargets: legalTargets, hasAnyMove: hasAnyMove,
+  attemptMove: attemptMove, beginTurn: beginTurn, endTurn: endTurn,
+  CELLS: CELLS, DIRS: DIRS, key: key, inBoard: inBoard, hexDist: hexDist,
+  // couche UI (tests de fumée)
+  G_: function(){ return G; },
+  Assets: Assets, asset: asset,
+  // modes IA / en ligne (tests)
+  iaChoisirCoup: iaChoisirCoup, iaCandidats: iaCandidats, iaScoreCoup: iaScoreCoup, iaMenace: iaMenace,
+  viewerPlayer: viewerPlayer, vueCorailPayload: vueCorailPayload, encoderEvent: encoderEvent,
+  mode_: function(){ return MODE; }, net_: function(){ return NET; },
+  ui: UI,
+  clickCell: function(q, r){ onCanvasClick.apply(null, cellPixForTest(q, r)); },
+  moveMouse: function(q, r){ onCanvasMove.apply(null, cellPixForTest(q, r)); },
+  advance: advanceHandoff,
+  newPartie: function(){ newPartie(); },
+  renderOnce: function(){ render(nowSec()); }
+};
+function cellPixForTest(q, r){
+  var L = layout();
+  var P = cellToPixel(q, r, L.size, L.cx, L.cy);
+  return [P.x, P.y];
+}
+
+if (typeof document !== 'undefined' && typeof globalThis.__BRUME_HEADLESS === 'undefined'){
+  boot();
+}
+</script>
+</body>
+</html>

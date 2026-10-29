@@ -1,0 +1,26 @@
+{
+  "title": "Brume",
+  "description": "Chess-like strategy in the fog: five pieces, a Lighthouse to capture, and lightning flashes that reveal the whole board four times per game. Between flashes, all you have is what you remember. Play hotseat, against an honest AI, or online with a friend in a LOB7 room.",
+  "entrypoint": "index.html",
+  "license": "CC BY-SA 4.0",
+  "controls": [
+    "Click one of your pieces, then click a highlighted target.",
+    "Moves into the dark are legal — hidden enemies can be captured by surprise.",
+    "Hotseat: pass the device when the handoff screen appears."
+  ],
+  "genre": [
+    "Strategy",
+    "Abstract"
+  ],
+  "themes": [
+    "Fog",
+    "Memory"
+  ],
+  "credits": [
+    "A game by Cédric Bernadac, created with AI agents (ZCode & Kimi K3.1 Pro)."
+  ],
+  "multiplayer": {
+    "mode": "room",
+    "maxPlayers": 2
+  }
+}
