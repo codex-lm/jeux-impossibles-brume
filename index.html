@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BRUME — Les échecs dans le brouillard</title>
+<title>BRUME — Fog-of-war chess</title>
 <style>
   :root{
     --nuit:#0a1a20; --nuit2:#0d2430; --azur:#6ec8ff; --corail:#ff9166; --or:#ffc46b; --encre:#cfe0e6; --gris:#85a6b0;
@@ -96,37 +96,57 @@
 
   /* ---- accueil / modes / salon LOB7 ---- */
   #rules{z-index:90}
-  #accueil{z-index:70; background:rgba(5,19,26,.9); backdrop-filter:blur(3px)}
+  #accueil{z-index:70; background:rgba(5,19,26,.45); justify-content:space-between; padding:16px 16px 14px}
+  #accueil::before{content:''; position:absolute; left:0; right:0; top:0; height:150px; z-index:1;
+    background:linear-gradient(180deg, rgba(5,19,26,.94), rgba(5,19,26,0)); pointer-events:none}
+  .accueil-top, .accueil-bottom{position:relative; z-index:2}
+  #btn-lang-acc{z-index:3}
   #lobby{z-index:76; background:rgba(5,19,26,.94)}
   #perdue{z-index:86; background:rgba(5,19,26,.9); backdrop-filter:blur(3px)}
-  #accueil .modes{display:flex; flex-direction:column; gap:10px; width:100%; max-width:440px; margin-top:6px}
+  .accueil-top{display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center;
+    margin-top:1.5vh; text-shadow:0 2px 14px rgba(0,0,0,.8)}
+  .accueil-top .small{color:var(--gris); letter-spacing:.3em; text-indent:.3em; font-size:11.5px}
+  .accueil-top h2{font-family:Georgia,serif; font-size:46px; letter-spacing:.1em; color:var(--or);
+    line-height:1.05; text-shadow:0 0 26px currentColor}
+  .accueil-top .sub{color:var(--encre); font-size:14.5px; line-height:1.5}
+  .accueil-bottom{width:100%; max-width:430px; margin:0 auto; display:flex; flex-direction:column; gap:10px}
+  #accueil .modes{display:flex; flex-direction:column; gap:9px; width:100%}
+  #accueil .row{display:flex; gap:10px; justify-content:center}
+  #accueil #m-ia{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:min(400px, 86vw); min-width:300px; min-height:114px; align-items:center; justify-content:center; text-align:center;
+    gap:7px; padding:18px 30px; font-size:19px; z-index:2; background:#0f2933;
+    box-shadow:0 6px 34px rgba(0,0,0,.55), 0 0 26px rgba(255,196,107,.14)}
+  #accueil #m-ia small{font-size:12.5px}
+  #btn-lang-acc{position:absolute; top:12px; right:14px; min-width:52px; text-align:center; padding:7px 10px}
   button.mode{display:flex; flex-direction:column; align-items:flex-start; gap:3px; width:100%;
-    text-align:left; padding:11px 16px; font-size:15px}
+    text-align:left; padding:10px 16px; font-size:14.5px}
   button.mode small{color:var(--gris); font-size:11.5px; letter-spacing:.02em; font-weight:400}
   button.mode:hover small{color:var(--encre)}
-  #niveaux{display:flex; gap:10px; width:100%; max-width:440px}
+  #niveaux{display:flex; gap:10px; width:100%}
   #niveaux button{flex:1}
   #accueil-msg{color:#ffd9c9; border:1px solid rgba(255,145,102,.4); background:rgba(255,145,102,.07);
-    padding:9px 14px; border-radius:8px; font-size:13px; line-height:1.45; max-width:440px; text-align:center}
+    padding:9px 14px; border-radius:8px; font-size:13px; line-height:1.45; text-align:center}
+  #btn-lang{min-width:52px; text-align:center; padding:7px 10px}
 </style>
 </head>
 <body>
-<noscript>Ce jeu nécessite JavaScript.</noscript>
+<noscript>Ce jeu nécessite JavaScript. — This game requires JavaScript.</noscript>
 <header>
   <div class="brand">
     <h1>BRUME</h1>
-    <p>Les échecs dans le brouillard</p>
+    <p id="brand-sub"></p>
   </div>
-  <div id="turnchip"><span class="pion"></span><span id="turnchip-txt">…</span></div>
+  <div id="turnchip"><span class="pion"></span><span id="turnchip-txt"></span></div>
   <div class="actions">
-    <button id="btn-new" type="button">Nouvelle partie</button>
-    <button id="btn-rules" type="button">Règles</button>
-    <button id="btn-leave" type="button" class="hidden">Quitter le salon</button>
+    <button id="btn-lang" type="button">FR</button>
+    <button id="btn-new" type="button"></button>
+    <button id="btn-rules" type="button"></button>
+    <button id="btn-leave" type="button" class="hidden"></button>
   </div>
 </header>
 <div id="eclairbar">
   <canvas id="eclair-ico" width="40" height="40"></canvas>
-  <span id="eclair-info">…</span>
+  <span id="eclair-info"></span>
 </div>
 <main id="board-wrap">
   <canvas id="board"></canvas>
@@ -135,120 +155,80 @@
 
 <div id="handoff" class="overlay hidden" role="button" tabindex="0">
   <div class="orn"></div>
-  <p class="small">PASSE L'APPAREIL À</p>
+  <p class="small" id="handoff-small"></p>
   <h2 id="handoff-player">AZUR</h2>
   <p class="note" id="handoff-note"></p>
-  <p class="pulse">Clique n'importe où pour continuer</p>
+  <p class="pulse" id="handoff-pulse"></p>
   <div class="orn"></div>
 </div>
 
 <div id="victory" class="overlay hidden">
   <div class="card">
-    <p class="small">FIN DE PARTIE</p>
-    <h2 id="vic-title">VICTOIRE</h2>
+    <p class="small" id="vic-over"></p>
+    <h2 id="vic-title"></h2>
     <p class="sub" id="vic-sub"></p>
     <div class="row">
-      <button id="btn-replay" type="button">Rejouer</button>
-      <button id="btn-inspect" type="button">Voir le plateau</button>
+      <button id="btn-replay" type="button"></button>
+      <button id="btn-inspect" type="button"></button>
     </div>
   </div>
 </div>
 
 <div id="rules" class="overlay hidden">
   <div class="card">
-    <h2>RÈGLES</h2>
-    <h3>BUT DU JEU</h3>
-    <p>Capturer le <b>Phare</b> adverse. Qui perd son Phare perd la partie, immédiatement.</p>
-    <h3>PLATEAU</h3>
-    <p>Un hexagone de 61 cases (rayon 4), en coordonnées axiales.</p>
-    <h3>TES PIÈCES (5)</h3>
-    <ul>
-      <li><b>Phare</b> (roi) : 1 case dans l'une des 6 directions.</li>
-      <li><b>Gardes</b> (2) : en ligne droite, de 1 à 2 cases.</li>
-      <li><b>Lanciers</b> (2) : en ligne droite, de 1 à 3 cases.</li>
-    </ul>
-    <p>Aucun saut : toute pièce présente sur la trajectoire — même cachée par le brouillard — bloque.
-    Un glissement qui rencontre une pièce ennemie s'arrête dessus et la capture.</p>
-    <h3>LE BROUILLARD</h3>
-    <p>À ton tour, tu ne vois que tes pièces et les cases situées à distance hexagonale ≤ 1 d'elles.
-    Tout le reste du plateau est noir : les pièces ennemies n'apparaissent que dans ce rayon.</p>
-    <h3>L'ÉCLAIR</h3>
-    <p>Chaque joueur a son propre compteur. Au début de ton 4<sup>e</sup>, 8<sup>e</sup>, 12<sup>e</sup>… tour,
-    un éclair révèle toutes les pièces ennemies pendant tout ce tour — puis le brouillard retombe.</p>
-    <h3>COUPS À L'AVEUGLE</h3>
-    <p>Tu peux jouer vers des cases que tu ne vois pas. Si la case ou la trajectoire contenait un ennemi
-    caché, le coup se résout normalement : <b>capture surprise !</b></p>
-    <h3>SOUVENIRS</h3>
-    <p>Une pièce ennemie aperçue puis perdue de vue laisse un fantôme estompé à sa dernière position connue,
-    étiqueté du numéro de tour (T) de l'observation. Un souvenir n'est jamais un blocage : ce n'est qu'un souvenir.</p>
-    <h3>PASSAGE D'APPAREIL</h3>
-    <p>Partie à deux sur le même écran. Après chaque coup, l'écran de passage masque totalement le plateau :
-    le joueur suivant ne voit jamais la vue de l'adversaire.</p>
-    <h3>TOURS PASSÉS</h3>
-    <p>Aucun coup légal : ton tour est passé automatiquement. Deux passes consécutives : la partie est nulle.</p>
-    <h3>CONTRE L'IA</h3>
-    <p>Tu joues Azur, l'IA joue Corail (niveau facile ou normal). L'IA est honnête : elle ne voit jamais
-    tes positions réelles. Elle décide uniquement avec ses pièces, son rayon de vision, ses souvenirs
-    estompés et les révélations de ses propres éclairs — exactement les mêmes informations que toi.
-    En facile, elle joue environ six coups sur dix au hasard (légaux) ; en normal, elle privilégie les
-    captures visibles (Phare &gt; Lancier &gt; Garde), avance vers tes pièces aperçues, protège son Phare
-    et explore le brouillard.</p>
-    <h3>EN LIGNE — SALON LOB7</h3>
-    <p>Deux joueurs à distance dans un salon LOB7 (lob7.com). Le plus petit identifiant de connexion
-    devient Azur, l'autre Corail. Chaque écran ne dessine que sa propre vue : l'état complet du plateau
-    ne circule jamais dans le salon. Mention honnête : le joueur Azur est aussi l'hôte-arbitre
-    technique — son navigateur applique les règles et diffuse à Corail sa vue filtrée, calculée par le
-    même code de brouillard. C'est une confiance due à l'hôte, comme un arbitre-joueur au plateau.
-    Si la connexion se perd, la partie s'arrête (pas de reprise pour l'instant).</p>
-    <p class="pourquoi">Pourquoi impossible avant l'informatique : il faudrait deux plateaux dupliqués et un arbitre permanent.</p>
-    <div class="row"><button id="btn-rules-close" type="button">Fermer</button></div>
+    <h2 id="rules-title"></h2>
+    <div id="rules-body"></div>
+    <div class="row"><button id="btn-rules-close" type="button"></button></div>
   </div>
 </div>
 
 <div id="accueil" class="overlay">
-  <div class="card">
-    <p class="small">LES ÉCHECS DANS LE BROUILLARD</p>
-    <h2 style="color:var(--or)">BRUME</h2>
-    <p class="sub">Hexagone de 61 cases, éclairs révélateurs, souvenirs estompés.<br>Choisis ton mode de jeu :</p>
+  <button id="btn-lang-acc" type="button">FR</button>
+  <div class="accueil-top">
+    <p class="small" id="acc-kicker"></p>
+    <h2>BRUME</h2>
+    <p class="sub" id="acc-sub"></p>
+  </div>
+  <button class="mode" id="m-ia" type="button">
+    <span id="m-ia-title"></span>
+    <small id="m-ia-desc"></small>
+  </button>
+  <div class="accueil-bottom">
     <div class="modes">
       <button class="mode" id="m-hotseat" type="button">
-        Deux joueurs — même écran
-        <small>La partie se passe l'appareil après chaque coup, comme au plateau.</small>
+        <span id="m-hotseat-txt"></span>
+        <small id="m-hotseat-desc"></small>
       </button>
-      <button class="mode" id="m-ia" type="button">
-        Contre l'IA
-        <small>Tu joues Azur, l'IA joue Corail — elle ne voit pas plus que toi.</small>
-      </button>
-      <div id="niveaux" class="hidden">
-        <button id="m-ia-facile" type="button">Facile</button>
-        <button id="m-ia-normal" type="button">Normal</button>
-      </div>
       <button class="mode" id="m-online" type="button">
-        En ligne — salon LOB7
-        <small>Deux joueurs à distance via lob7.com, dans le même salon.</small>
+        <span id="m-online-txt"></span>
+        <small id="m-online-desc"></small>
       </button>
+      <div id="niveaux">
+        <button id="m-ia-facile" type="button"></button>
+        <button id="m-ia-normal" type="button"></button>
+      </div>
     </div>
     <p id="accueil-msg" class="hidden"></p>
-    <div class="row"><button id="btn-accueil-rules" type="button">Lire les règles</button></div>
+    <div class="row"><button id="btn-accueil-rules" type="button"></button></div>
   </div>
 </div>
 
 <div id="lobby" class="overlay hidden">
   <div class="card">
-    <p class="small">SALON LOB7</p>
-    <h2 style="color:var(--or)">EN LIGNE</h2>
-    <p class="sub" id="lobby-msg">Connexion au salon…</p>
-    <p class="pulse">Ne ferme pas cette page</p>
-    <div class="row"><button id="btn-lobby-cancel" type="button">Annuler</button></div>
+    <p class="small" id="lob-kicker"></p>
+    <h2 style="color:var(--or)" id="lob-title"></h2>
+    <p class="sub" id="lobby-msg"></p>
+    <p class="pulse" id="lob-keep"></p>
+    <div class="row"><button id="btn-lobby-cancel" type="button"></button></div>
   </div>
 </div>
 
 <div id="perdue" class="overlay hidden">
   <div class="card">
-    <p class="small">SALON LOB7</p>
-    <h2 style="color:var(--corail)">CONNEXION PERDUE</h2>
-    <p class="sub" id="perdue-msg">Le salon LOB7 n'est plus disponible.</p>
-    <div class="row"><button id="btn-perdue-retour" type="button">Retour à l'accueil</button></div>
+    <p class="small" id="perdue-kicker"></p>
+    <h2 style="color:var(--corail)" id="perdue-title"></h2>
+    <p class="sub" id="perdue-msg"></p>
+    <div class="row"><button id="btn-perdue-retour" type="button"></button></div>
   </div>
 </div>
 
@@ -454,8 +434,369 @@ var SQRT3 = Math.sqrt(3);
 var RADIUS = 4;                                   // rayon du plateau
 var DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]]; // 6 directions axiales
 var RANGE = { phare:1, garde:2, lancier:3 };
-var NOM_TYPE = { phare:'Phare', garde:'Garde', lancier:'Lancier' };
-var NOM_J = { azur:'Azur', corail:'Corail' };
+var NOM_J = { azur:'Azur', corail:'Corail' };   // noms propres : inchangés dans les deux langues
+
+/* ---------- 1bis. Internationalisation (anglais par défaut, bascule FR) ---------- */
+var LANG = 'en';
+var STR = {
+  en: {
+    doc_title: 'BRUME — Fog-of-war chess',
+    brand_sub: 'Fog-of-war chess',
+    hud_new: 'New game',
+    hud_rules: 'Rules',
+    hud_leave: 'Leave room',
+    acc_kicker: 'FOG-OF-WAR CHESS',
+    acc_sub: 'A 61-cell hexagon, revealing lightning, faded memories.<br>Pick a mode and play:',
+    acc_ia: 'Play against the AI',
+    acc_ia_desc: 'You play Azur, the AI plays Corail — it sees no more than you.',
+    acc_hotseat: 'Two players — same screen',
+    acc_hotseat_desc: 'Pass the device after each move, just like at the board.',
+    acc_online: 'Online — LOB7 room',
+    acc_online_desc: 'Two remote players via lob7.com, in the same room.',
+    acc_rules: 'Read the rules',
+    lvl_easy: 'Easy AI',
+    lvl_normal: 'Normal AI',
+    chip_turn: '{name}\u2019s turn · turn {n}',
+    chip_turn_suf: '{name}\u2019s turn{suf} · turn {n}',
+    chip_ai: ' (AI)',
+    chip_you: ' (you)',
+    chip_ecl_suffix: ' · LIGHTNING',
+    chip_win: '{name} wins',
+    chip_draw: 'Draw',
+    ecl_active_you: 'LIGHTNING — all enemy pieces are revealed this turn.',
+    ecl_active_other: '{name}\u2019s lightning: this player sees every opposing piece this turn.',
+    ecl_next: 'Azur\u2019s lightning: turn {a} · Corail\u2019s lightning: turn {c}',
+    hand_small: 'PASS THE DEVICE TO',
+    hand_click: 'Click anywhere to continue',
+    hand_next_ecl: 'Your upcoming turn is a LIGHTNING one: enemy pieces will be revealed.',
+    vic_over: 'GAME OVER',
+    vic_win_azur: 'AZUR WINS',
+    vic_win_corail: 'CORAIL WINS',
+    vic_draw: 'DRAW',
+    vic_replay: 'Play again',
+    vic_inspect: 'View board',
+    reason_phare_azur: 'The Azur Lighthouse has been captured.',
+    reason_phare_corail: 'The Corail Lighthouse has been captured.',
+    reason_draw: 'No legal moves left for either side.',
+    piece_phare: 'Lighthouse',
+    piece_garde: 'Guard',
+    piece_lancier: 'Lancer',
+    t_eclair: 'Lightning! Enemy pieces are revealed for this turn.',
+    t_perte: 'Your {piece} has been captured!',
+    t_pass: '{name} has no legal move: turn skipped automatically.',
+    t_pass_ia: 'Corail (AI) has no legal move: turn skipped.',
+    t_surprise: 'Surprise capture!',
+    t_capture: '{owner} {piece} captured.',
+    t_phare_fall: '{name}\u2019s Lighthouse has fallen!',
+    t_new_game: 'New game — {name} plays first.',
+    t_ai_think: 'The AI is thinking…',
+    t_ai_eclair: 'AI lightning — Corail sees your pieces this turn.',
+    t_ia_easy: 'easy',
+    t_ia_normal: 'normal',
+    t_ia_start: 'You play AZUR — the {lvl} AI plays CORAIL.',
+    lob_kicker: 'LOB7 ROOM',
+    lob_title: 'ONLINE',
+    lob_connecting: 'Connecting to the LOB7 room…',
+    lob_joined: 'Room joined. Waiting for the second player…',
+    lob_wait2: 'Waiting for the second player… Open this same room in a second LOB7 reader.',
+    lob_keep: 'Keep this page open',
+    lob_cancel: 'Cancel',
+    lost_kicker: 'LOB7 ROOM',
+    lost_title: 'CONNECTION LOST',
+    lost_default: 'The LOB7 room is no longer available.',
+    lost_back: 'Back to home',
+    net_need_lob7: 'Online mode requires lob7.com — pick another mode.',
+    net_role_azur: 'You are AZUR — host and referee of this game. Your move.',
+    net_role_corail: 'You are CORAIL — waiting for the host\u2019s (Azur\u2019s) view…',
+    net_start: 'The online game begins!',
+    net_turn_corail: 'Corail\u2019s turn — waiting for their move…',
+    net_move_sent: 'Move sent — awaiting host validation…',
+    net_move_failed: 'Move send failed — try again.',
+    net_refused: 'Move rejected by the host: {r} — play again.',
+    net_reason_noturn: 'it is not Corail\u2019s turn',
+    net_reason_piece: 'unknown piece',
+    net_reason_illegal: 'illegal move',
+    net_reason_unknown: 'unknown reason',
+    net_lost_send: 'Sending to the room failed.',
+    net_lost_read: 'Reading the room failed.',
+    net_lost_closed: 'The LOB7 room has closed.',
+    net_lost_sub: 'Unable to follow the room.',
+    net_lost_quit: 'The opponent left the room.',
+    net_only_host: 'Online, only the host (Azur) can start a new game.',
+    rules_title: 'RULES',
+    rules_close: 'Close',
+    rules_html: '<h3>GOAL</h3>' +
+      '<p>Capture the opposing <b>Lighthouse</b>. Whoever loses their Lighthouse loses the game, immediately.</p>' +
+      '<h3>BOARD</h3>' +
+      '<p>A hexagon of 61 cells (radius 4), in axial coordinates.</p>' +
+      '<h3>YOUR PIECES (5)</h3>' +
+      '<ul>' +
+      '<li><b>Lighthouse</b> (king): 1 cell in any of the 6 directions.</li>' +
+      '<li><b>Guards</b> (2): in a straight line, 1 to 2 cells.</li>' +
+      '<li><b>Lancers</b> (2): in a straight line, 1 to 3 cells.</li>' +
+      '</ul>' +
+      '<p>No jumping: any piece standing on the path — even one hidden by the fog — blocks.' +
+      'A glide that runs into an enemy piece stops on it and captures it.</p>' +
+      '<h3>THE FOG</h3>' +
+      '<p>On your turn, you only see your pieces and the cells within hex distance ≤ 1 of them.' +
+      'Everything else on the board is black: enemy pieces appear only within that radius.</p>' +
+      '<h3>THE LIGHTNING</h3>' +
+      '<p>Each player has their own counter. At the start of your 4th, 8th, 12th… turn,' +
+      'a lightning bolt reveals every enemy piece for that whole turn — then the fog falls back.</p>' +
+      '<h3>BLIND MOVES</h3>' +
+      '<p>You may play toward cells you cannot see. If the cell or the path held a hidden enemy,' +
+      'the move resolves normally: <b>surprise capture!</b></p>' +
+      '<h3>MEMORIES</h3>' +
+      '<p>An enemy piece glimpsed then lost from sight leaves a faded ghost at its last known position,' +
+      'labelled with the turn number (T) of the sighting. A memory never blocks: it is only a memory.</p>' +
+      '<h3>DEVICE HANDOFF</h3>' +
+      '<p>Two players on the same screen. After each move, the handoff screen fully hides the board:' +
+      'the next player never sees the opponent\u2019s view.</p>' +
+      '<h3>PASSED TURNS</h3>' +
+      '<p>No legal move: your turn is skipped automatically. Two consecutive passes: the game is a draw.</p>' +
+      '<h3>AGAINST THE AI</h3>' +
+      '<p>You play Azur, the AI plays Corail (easy or normal level). The AI is honest: it never sees' +
+      'your true positions. It decides only from its pieces, its sight radius, its faded memories' +
+      'and its own lightning reveals — exactly the same information as you.' +
+      'On easy, it plays about six moves out of ten at random (legal ones); on normal, it favors' +
+      'visible captures (Lighthouse &gt; Lancer &gt; Guard), advances toward your glimpsed pieces,' +
+      'protects its Lighthouse and explores the fog.</p>' +
+      '<h3>ONLINE — LOB7 ROOM</h3>' +
+      '<p>Two remote players in a LOB7 room (lob7.com). The smaller connection identifier' +
+      'becomes Azur, the other Corail. Each screen draws only its own view: the full board state' +
+      'never travels through the room. Honest disclosure: the Azur player is also the technical' +
+      'host-referee — their browser applies the rules and broadcasts to Corail a filtered view,' +
+      'computed by the very same fog code. It is trust owed to the host, like a referee-player at' +
+      'the board. If the connection is lost, the game stops (no resume for now).</p>' +
+      '<p class="pourquoi">Why impossible before computers: it would take two duplicated boards and a permanent referee.</p>'
+  },
+  fr: {
+    doc_title: 'BRUME — Les échecs dans le brouillard',
+    brand_sub: 'Les échecs dans le brouillard',
+    hud_new: 'Nouvelle partie',
+    hud_rules: 'Règles',
+    hud_leave: 'Quitter le salon',
+    acc_kicker: 'LES ÉCHECS DANS LE BROUILLARD',
+    acc_sub: 'Hexagone de 61 cases, éclairs révélateurs, souvenirs estompés.<br>Choisis ton mode de jeu :',
+    acc_ia: 'Jouer contre l\u2019IA',
+    acc_ia_desc: 'Tu joues Azur, l\u2019IA joue Corail — elle ne voit pas plus que toi.',
+    acc_hotseat: 'Deux joueurs — même écran',
+    acc_hotseat_desc: 'La partie se passe l\u2019appareil après chaque coup, comme au plateau.',
+    acc_online: 'En ligne — salon LOB7',
+    acc_online_desc: 'Deux joueurs à distance via lob7.com, dans le même salon.',
+    acc_rules: 'Lire les règles',
+    lvl_easy: 'IA Facile',
+    lvl_normal: 'IA Normale',
+    chip_turn: 'Au tour de {name} · tour {n}',
+    chip_turn_suf: 'Au tour de {name}{suf} · tour {n}',
+    chip_ai: ' (IA)',
+    chip_you: ' (toi)',
+    chip_ecl_suffix: ' · ÉCLAIR',
+    chip_win: 'Victoire de {name}',
+    chip_draw: 'Égalité',
+    ecl_active_you: 'ÉCLAIR — toutes les pièces ennemies sont révélées ce tour.',
+    ecl_active_other: 'Éclair de {name} : ce joueur voit toutes les pièces adverses ce tour-ci.',
+    ecl_next: 'Éclair d\u2019Azur : tour {a} · Éclair de Corail : tour {c}',
+    hand_small: 'PASSE L\u2019APPAREIL À',
+    hand_click: 'Clique n\u2019importe où pour continuer',
+    hand_next_ecl: 'Ton tour à venir est un ÉCLAIR : les pièces ennemies seront révélées.',
+    vic_over: 'FIN DE PARTIE',
+    vic_win_azur: 'VICTOIRE D\u2019AZUR',
+    vic_win_corail: 'VICTOIRE DE CORAIL',
+    vic_draw: 'ÉGALITÉ',
+    vic_replay: 'Rejouer',
+    vic_inspect: 'Voir le plateau',
+    reason_phare_azur: 'Le Phare azur a été capturé.',
+    reason_phare_corail: 'Le Phare corail a été capturé.',
+    reason_draw: 'Plus aucun coup légal pour les deux camps.',
+    piece_phare: 'Phare',
+    piece_garde: 'Garde',
+    piece_lancier: 'Lancier',
+    t_eclair: 'Éclair ! Les pièces ennemies sont révélées pour ce tour.',
+    t_perte: 'Ton {piece} a été capturé !',
+    t_pass: '{name} n\u2019a aucun coup légal : tour passé automatiquement.',
+    t_pass_ia: 'Corail (IA) n\u2019a aucun coup légal : tour passé.',
+    t_surprise: 'Capture surprise !',
+    t_capture: '{piece} {owner} capturé.',
+    t_phare_fall: 'Le Phare {name} est tombé !',
+    t_new_game: 'La partie commence. {name} joue en premier.',
+    t_ai_think: 'L\u2019IA réfléchit…',
+    t_ai_eclair: 'Éclair de l\u2019IA — Corail voit tes pièces ce tour-ci.',
+    t_ia_easy: 'facile',
+    t_ia_normal: 'normale',
+    t_ia_start: 'Tu joues AZUR — l\u2019IA {lvl} joue CORAIL.',
+    lob_kicker: 'SALON LOB7',
+    lob_title: 'EN LIGNE',
+    lob_connecting: 'Connexion au salon…',
+    lob_joined: 'Salon rejoint. En attente du second joueur…',
+    lob_wait2: 'En attente du second joueur… Ouvre ce même salon dans un second lecteur LOB7.',
+    lob_keep: 'Ne ferme pas cette page',
+    lob_cancel: 'Annuler',
+    lost_kicker: 'SALON LOB7',
+    lost_title: 'CONNEXION PERDUE',
+    lost_default: 'Le salon LOB7 n\u2019est plus disponible.',
+    lost_back: 'Retour à l\u2019accueil',
+    net_need_lob7: 'Le mode en ligne nécessite lob7.com — choisis un autre mode.',
+    net_role_azur: 'Tu es AZUR — hôte et arbitre de la partie. À toi de jouer.',
+    net_role_corail: 'Tu es CORAIL — en attente de la vue de l\u2019hôte (Azur)…',
+    net_start: 'La partie en ligne commence !',
+    net_turn_corail: 'Au tour de Corail — attente de son coup…',
+    net_move_sent: 'Coup transmis — validation par l\u2019hôte…',
+    net_move_failed: 'Envoi du coup échoué — réessaie.',
+    net_refused: 'Coup refusé par l\u2019hôte : {r} — rejoue.',
+    net_reason_noturn: 'ce n\u2019est pas le tour de Corail',
+    net_reason_piece: 'pièce inconnue',
+    net_reason_illegal: 'coup illégal',
+    net_reason_unknown: 'raison inconnue',
+    net_lost_send: 'L\u2019envoi vers le salon a échoué.',
+    net_lost_read: 'La lecture du salon a échoué.',
+    net_lost_closed: 'Le salon LOB7 s\u2019est fermé.',
+    net_lost_sub: 'Impossible de suivre le salon.',
+    net_lost_quit: 'L\u2019adversaire a quitté le salon.',
+    net_only_host: 'En ligne, seul l\u2019hôte (Azur) peut relancer une partie.',
+    rules_title: 'RÈGLES',
+    rules_close: 'Fermer',
+    rules_html: '<h3>BUT DU JEU</h3>' +
+      '<p>Capturer le <b>Phare</b> adverse. Qui perd son Phare perd la partie, immédiatement.</p>' +
+      '<h3>PLATEAU</h3>' +
+      '<p>Un hexagone de 61 cases (rayon 4), en coordonnées axiales.</p>' +
+      '<h3>TES PIÈCES (5)</h3>' +
+      '<ul>' +
+      '<li><b>Phare</b> (roi) : 1 case dans l\u2019une des 6 directions.</li>' +
+      '<li><b>Gardes</b> (2) : en ligne droite, de 1 à 2 cases.</li>' +
+      '<li><b>Lanciers</b> (2) : en ligne droite, de 1 à 3 cases.</li>' +
+      '</ul>' +
+      '<p>Aucun saut : toute pièce présente sur la trajectoire — même cachée par le brouillard — bloque.' +
+      'Un glissement qui rencontre une pièce ennemie s\u2019arrête dessus et la capture.</p>' +
+      '<h3>LE BROUILLARD</h3>' +
+      '<p>À ton tour, tu ne vois que tes pièces et les cases situées à distance hexagonale ≤ 1 d\u2019elles.' +
+      'Tout le reste du plateau est noir : les pièces ennemies n\u2019apparaissent que dans ce rayon.</p>' +
+      '<h3>L\u2019ÉCLAIR</h3>' +
+      '<p>Chaque joueur a son propre compteur. Au début de ton 4<sup>e</sup>, 8<sup>e</sup>, 12<sup>e</sup>… tour,' +
+      'un éclair révèle toutes les pièces ennemies pendant tout ce tour — puis le brouillard retombe.</p>' +
+      '<h3>COUPS À L\u2019AVEUGLE</h3>' +
+      '<p>Tu peux jouer vers des cases que tu ne vois pas. Si la case ou la trajectoire contenait un ennemi' +
+      'caché, le coup se résout normalement : <b>capture surprise !</b></p>' +
+      '<h3>SOUVENIRS</h3>' +
+      '<p>Une pièce ennemie aperçue puis perdue de vue laisse un fantôme estompé à sa dernière position connue,' +
+      'étiqueté du numéro de tour (T) de l\u2019observation. Un souvenir n\u2019est jamais un blocage : ce n\u2019est qu\u2019un souvenir.</p>' +
+      '<h3>PASSAGE D\u2019APPAREIL</h3>' +
+      '<p>Partie à deux sur le même écran. Après chaque coup, l\u2019écran de passage masque totalement le plateau :' +
+      'le joueur suivant ne voit jamais la vue de l\u2019adversaire.</p>' +
+      '<h3>TOURS PASSÉS</h3>' +
+      '<p>Aucun coup légal : ton tour est passé automatiquement. Deux passes consécutives : la partie est nulle.</p>' +
+      '<h3>CONTRE L\u2019IA</h3>' +
+      '<p>Tu joues Azur, l\u2019IA joue Corail (niveau facile ou normal). L\u2019IA est honnête : elle ne voit jamais' +
+      'tes positions réelles. Elle décide uniquement avec ses pièces, son rayon de vision, ses souvenirs' +
+      'estompés et les révélations de ses propres éclairs — exactement les mêmes informations que toi.' +
+      'En facile, elle joue environ six coups sur dix au hasard (légaux) ; en normal, elle privilégie les' +
+      'captures visibles (Phare &gt; Lancier &gt; Garde), avance vers tes pièces aperçues, protège son Phare' +
+      'et explore le brouillard.</p>' +
+      '<h3>EN LIGNE — SALON LOB7</h3>' +
+      '<p>Deux joueurs à distance dans un salon LOB7 (lob7.com). Le plus petit identifiant de connexion' +
+      'devient Azur, l\u2019autre Corail. Chaque écran ne dessine que sa propre vue : l\u2019état complet du plateau' +
+      'ne circule jamais dans le salon. Mention honnête : le joueur Azur est aussi l\u2019hôte-arbitre' +
+      'technique — son navigateur applique les règles et diffuse à Corail sa vue filtrée, calculée par le' +
+      'même code de brouillard. C\u2019est une confiance due à l\u2019hôte, comme un arbitre-joueur au plateau.' +
+      'Si la connexion se perd, la partie s\u2019arrête (pas de reprise pour l\u2019instant).</p>' +
+      '<p class="pourquoi">Pourquoi impossible avant l\u2019informatique : il faudrait deux plateaux dupliqués et un arbitre permanent.</p>'
+  }
+};
+
+/* T(clé, params) : texte UI dans la langue courante (fallback EN, puis clé brute). */
+function T(key, params){
+  var table = STR[LANG] && STR[LANG][key] != null ? STR[LANG] : STR.en;
+  var s = table[key] != null ? String(table[key]) : key;
+  if (params){
+    Object.keys(params).forEach(function(p){
+      s = s.split('{' + p + '}').join(params[p]);
+    });
+  }
+  return s;
+}
+function pieceName(type){ return T('piece_' + type); }
+
+/* Persistance file:// sûre : tout échec de sessionStorage est silencieux. */
+function langLoad(){
+  var l = null;
+  try { l = window.sessionStorage.getItem('brume-lang'); } catch (e){ l = null; }
+  return (l === 'fr' || l === 'en') ? l : 'en';
+}
+function langSave(l){
+  try { window.sessionStorage.setItem('brume-lang', l); } catch (e){ /* file:// : silencieux */ }
+}
+function setLang(l){
+  LANG = (l === 'fr') ? 'fr' : 'en';
+  langSave(LANG);
+  applyLang();
+}
+
+/* Derniers messages dynamiques (salon), pour re-traduction à la volée. */
+var LOBBY_MSG = { key: 'lob_connecting', params: null };
+var PERDUE_MSG = { key: 'lost_default', params: null };
+
+/* Applique la langue courante à tous les textes statiques + écrans visibles. */
+function applyLang(){
+  if (typeof document === 'undefined' || !el.brandSub) return;
+  document.documentElement.lang = LANG;
+  document.title = T('doc_title');
+  var lbl = LANG === 'en' ? 'FR' : 'EN';
+  el.btnLang.textContent = lbl;
+  el.btnLangAcc.textContent = lbl;
+  el.brandSub.textContent = T('brand_sub');
+  el.btnNew.textContent = T('hud_new');
+  el.btnRules.textContent = T('hud_rules');
+  el.btnLeave.textContent = T('hud_leave');
+  el.handoffSmall.textContent = T('hand_small');
+  el.handoffPulse.textContent = T('hand_click');
+  el.vicOver.textContent = T('vic_over');
+  el.btnReplay.textContent = T('vic_replay');
+  el.btnInspect.textContent = T('vic_inspect');
+  el.rulesTitle.textContent = T('rules_title');
+  el.rulesBody.innerHTML = STR[LANG].rules_html;
+  el.btnRulesClose.textContent = T('rules_close');
+  el.accKicker.textContent = T('acc_kicker');
+  el.accSub.innerHTML = T('acc_sub');
+  el.mIaTitle.textContent = T('acc_ia');
+  el.mIaDesc.textContent = T('acc_ia_desc');
+  el.mHotseatTxt.textContent = T('acc_hotseat');
+  el.mHotseatDesc.textContent = T('acc_hotseat_desc');
+  el.mOnlineTxt.textContent = T('acc_online');
+  el.mOnlineDesc.textContent = T('acc_online_desc');
+  el.mIaFacile.textContent = T('lvl_easy');
+  el.mIaNormal.textContent = T('lvl_normal');
+  el.accRulesBtn.textContent = T('acc_rules');
+  if (!el.accueilMsg.classList.contains('hidden')) el.accueilMsg.textContent = T('net_need_lob7');
+  el.lobKicker.textContent = T('lob_kicker');
+  el.lobTitle.textContent = T('lob_title');
+  el.lobKeep.textContent = T('lob_keep');
+  el.btnLobbyCancel.textContent = T('lob_cancel');
+  el.lobbyMsg.textContent = T(LOBBY_MSG.key, LOBBY_MSG.params);
+  el.perdueKicker.textContent = T('lost_kicker');
+  el.perdueTitle.textContent = T('lost_title');
+  el.perdueBack.textContent = T('lost_back');
+  el.perdueMsg.textContent = T(PERDUE_MSG.key, PERDUE_MSG.params);
+  setChip();
+  setEclairInfo();
+  if (!el.handoff.classList.contains('hidden')) showHandoff(UI.handoffNote);
+  if (!el.victory.classList.contains('hidden')) showVictory();
+}
+
+/* Raison de refus réseau : codes courts, traduits à la réception. */
+function reasonText(r){
+  if (r === 'not-turn') return T('net_reason_noturn');
+  if (r === 'piece') return T('net_reason_piece');
+  if (typeof r === 'string' && r.indexOf('illegal') === 0)
+    return T('net_reason_illegal') + r.slice('illegal'.length);
+  return r || T('net_reason_unknown');
+}
+/* Raison de fin de partie : codes courts, traduits à l'affichage. */
+function vicReasonText(r){
+  if (r === 'phare-azur') return T('reason_phare_azur');
+  if (r === 'phare-corail') return T('reason_phare_corail');
+  if (r === 'plus-de-coups') return T('reason_draw');
+  return r || '';
+}
 
 var CELLS = [];                                   // les 61 cases (q,r)
 (function(){
@@ -645,7 +986,7 @@ function attemptMove(G, pieceId, tq, tr){
     if (cache) events.push({ type:'surprise', victime:capture, par:piece });
     if (capture.type === 'phare'){
       G.phase = 'over'; G.winner = piece.player;
-      G.vicReason = 'Le Phare ' + (capture.player === 'azur' ? 'azur' : 'corail') + ' a été capturé.';
+      G.vicReason = 'phare-' + capture.player;   // code court, traduit à l'affichage
       events.push({ type:'phare', winner:piece.player });
     }
   } else {
@@ -669,7 +1010,7 @@ function beginTurn(G){
     G.passStreak++;
     if (G.passStreak >= 2){
       G.phase = 'over'; G.winner = null;
-      G.vicReason = 'Plus aucun coup légal pour les deux camps.';
+      G.vicReason = 'plus-de-coups';   // code court, traduit à l'affichage
       ev.push({ type:'nulle' });
       return ev;
     }
@@ -1028,10 +1369,12 @@ function render(t){
   });
   ctx.globalAlpha = 1;
 
-  if (G.phase === 'handoff'){ drawHeaderIcon(); syncDom(); return; }  // plateau masqué
+  /* Accueil : le plateau reste vivant derrière le voile (pièces en place initiale). */
+  var accueilVivant = MODE === 'accueil';
+  if (G.phase === 'handoff' && !accueilVivant){ drawHeaderIcon(); syncDom(); return; }  // plateau masqué
 
   var L = layout(), s = L.size;
-  var reveal = G.phase === 'over';
+  var reveal = G.phase === 'over' || accueilVivant;
   var joueur = viewerPlayer();
   var vis = computeVision(G, joueur);
   var ecl = isEclairTurn(G, joueur) && !reveal;
@@ -1204,11 +1547,11 @@ function setChip(){
   chip.classList.remove('eclair');
   if (G.phase === 'over'){
     if (G.winner){
-      txt.textContent = 'Victoire de ' + NOM_J[G.winner];
+      txt.textContent = T('chip_win', { name: NOM_J[G.winner] });
       chip.querySelector('.pion').style.background = COL[G.winner];
       chip.style.color = COL[G.winner];
     } else {
-      txt.textContent = 'Égalité';
+      txt.textContent = T('chip_draw');
       chip.querySelector('.pion').style.background = COL.or;
       chip.style.color = COL.or;
     }
@@ -1217,10 +1560,12 @@ function setChip(){
   chip.style.color = '';
   chip.querySelector('.pion').style.background = COL[G.turn];
   var suffixe = '';
-  if (MODE === 'ia' && G.turn === 'corail') suffixe = ' (IA)';
-  else if (MODE === 'enligne' && G.turn === NET.role) suffixe = ' (toi)';
-  var base = 'Au tour de ' + NOM_J[G.turn] + suffixe + ' · tour ' + G.counts[G.turn];
-  if (G.phase === 'playing' && G.counts[G.turn] % 4 === 0){ base += ' · ÉCLAIR'; chip.classList.add('eclair'); }
+  if (MODE === 'ia' && G.turn === 'corail') suffixe = T('chip_ai');
+  else if (MODE === 'enligne' && G.turn === NET.role) suffixe = T('chip_you');
+  var base = suffixe
+    ? T('chip_turn_suf', { name: NOM_J[G.turn], suf: suffixe, n: G.counts[G.turn] })
+    : T('chip_turn', { name: NOM_J[G.turn], n: G.counts[G.turn] });
+  if (G.phase === 'playing' && G.counts[G.turn] % 4 === 0){ base += T('chip_ecl_suffix'); chip.classList.add('eclair'); }
   txt.textContent = base;
 }
 
@@ -1231,14 +1576,14 @@ function setEclairInfo(){
   if (actif){
     bar.classList.add('actif');
     if (viewerPlayer() === G.turn)
-      e.textContent = 'ÉCLAIR — toutes les pièces ennemies sont révélées ce tour.';
+      e.textContent = T('ecl_active_you');
     else
-      e.textContent = 'Éclair de ' + NOM_J[G.turn] + ' : ce joueur voit toutes les pièces adverses ce tour-ci.';
+      e.textContent = T('ecl_active_other', { name: NOM_J[G.turn] });
     return;
   }
   bar.classList.remove('actif');
   function next(p){ return 4 * (Math.floor(G.counts[p] / 4) + 1); }
-  e.textContent = 'Éclair d\u2019Azur : tour ' + next('azur') + ' · Éclair de Corail : tour ' + next('corail');
+  e.textContent = T('ecl_next', { a: next('azur'), c: next('corail') });
 }
 
 function drawHeaderIcon(){
@@ -1267,7 +1612,7 @@ function showHandoff(note){
   var notes = [];
   if (UI.handoffNote) notes.push(UI.handoffNote);
   if ((G.counts[G.turn] + 1) % 4 === 0)
-    notes.push('Ton tour à venir est un ÉCLAIR : les pièces ennemies seront révélées.');
+    notes.push(T('hand_next_ecl'));
   el.handoffNote.textContent = notes.join(' ');
   el.handoff.classList.remove('hidden');
 }
@@ -1276,13 +1621,13 @@ function hideHandoff(){ el.handoff.classList.add('hidden'); }
 
 function showVictory(){
   if (G.winner){
-    el.vicTitle.textContent = 'VICTOIRE D\u2019' + NOM_J[G.winner].toUpperCase();
+    el.vicTitle.textContent = T('vic_win_' + G.winner);
     el.vicTitle.style.color = COL[G.winner];
   } else {
-    el.vicTitle.textContent = 'ÉGALITÉ';
+    el.vicTitle.textContent = T('vic_draw');
     el.vicTitle.style.color = COL.or;
   }
-  el.vicSub.textContent = G.vicReason || '';
+  el.vicSub.textContent = vicReasonText(G.vicReason);
   el.victory.classList.remove('hidden');
 }
 
@@ -1295,11 +1640,11 @@ function advanceHandoff(){
     var e = ev[i];
     if (e.type === 'eclair'){
       UI.effects.push({ type:'flash', start: nowSec(), dur: .9 });
-      showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+      showToast(T('t_eclair'), 'eclair');
     } else if (e.type === 'perte'){
-      showToast('Ton ' + (NOM_TYPE[e.pieceType] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
+      showToast(T('t_perte', { piece: pieceName(e.pieceType) }), 'surprise');
     } else if (e.type === 'pass'){
-      passNote = NOM_J[e.player] + ' n\u2019a aucun coup légal : tour passé automatiquement.';
+      passNote = T('t_pass', { name: NOM_J[e.player] });
     } else if (e.type === 'nulle'){
       showVictory();
       return;
@@ -1317,7 +1662,7 @@ function newPartie(){
   UI.anims = []; UI.effects = []; UI.uiLock = false;
   el.victory.classList.add('hidden');
   hideHandoff();
-  showHandoff('La partie commence. ' + NOM_J[G.turn] + ' joue en premier.');
+  showHandoff(T('t_new_game', { name: NOM_J[G.turn] }));
 }
 
 function performMove(piece, tq, tr){
@@ -1345,12 +1690,12 @@ function animerEtContinuer(res, piece){
   }
   res.events.forEach(function(e){
     if (e.type === 'surprise'){
-      showToast('Capture surprise !', 'surprise');
-      showToast(NOM_TYPE[e.victime.type] + ' ' + NOM_J[e.victime.player] + ' capturé.');
+      showToast(T('t_surprise'), 'surprise');
+      showToast(T('t_capture', { piece: pieceName(e.victime.type), owner: NOM_J[e.victime.player] }));
     } else if (e.type === 'capture'){
-      showToast(NOM_TYPE[e.victime.type] + ' ' + NOM_J[e.victime.player] + ' capturé.');
+      showToast(T('t_capture', { piece: pieceName(e.victime.type), owner: NOM_J[e.victime.player] }));
     } else if (e.type === 'phare'){
-      showToast('Le Phare ' + NOM_J[res.capture.player] + ' est tombé !', 'eclair');
+      showToast(T('t_phare_fall', { name: NOM_J[res.capture.player] }), 'eclair');
     }
   });
   UI.selected = null; UI.targets = [];
@@ -1553,11 +1898,11 @@ function iaChoisirCoup(Gx, niveau){
 function toastEvenement(e){
   if (e.type === 'eclair'){
     UI.effects.push({ type:'flash', start: nowSec(), dur:.9 });
-    showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+    showToast(T('t_eclair'), 'eclair');
   } else if (e.type === 'perte'){
-    showToast('Ton ' + (NOM_TYPE[e.pieceType] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
+    showToast(T('t_perte', { piece: pieceName(e.pieceType) }), 'surprise');
   } else if (e.type === 'pass'){
-    showToast(NOM_J[e.player] + ' n\u2019a aucun coup légal : tour passé automatiquement.');
+    showToast(T('t_pass', { name: NOM_J[e.player] }));
   }
 }
 
@@ -1581,12 +1926,12 @@ function aiTour(){
   for (var i = 0; i < ev.length; i++){
     var e = ev[i];
     if (e.type === 'nulle'){ showVictory(); return; }
-    if (e.type === 'eclair') showToast('Éclair de l\u2019IA — Corail voit tes pièces ce tour-ci.', 'eclair');
-    else if (e.type === 'pass') showToast('Corail (IA) n\u2019a aucun coup légal : tour passé.');
+    if (e.type === 'eclair') showToast(T('t_ai_eclair'), 'eclair');
+    else if (e.type === 'pass') showToast(T('t_pass_ia'));
   }
   if (G.phase === 'over'){ showVictory(); return; }
   if (G.phase === 'handoff'){ tourHumainIA(); return; }  // l'IA n'a aucun coup légal
-  showToast('L\u2019IA réfléchit…');
+  showToast(T('t_ai_think'));
   setTimeout(function(){
     if (MODE !== 'ia' || G.phase !== 'playing' || G.turn !== 'corail') return;
     var mv = iaChoisirCoup(G, IA_LVL);
@@ -1599,10 +1944,9 @@ function demarrerIA(niveau){
   if (niveau) IA_LVL = niveau;
   MODE = 'ia';
   el.accueil.classList.add('hidden');
-  el.niveaux.classList.add('hidden');
   resetUIState();
   G = newGame();
-  showToast('Tu joues AZUR — l\u2019IA ' + (IA_LVL === 'facile' ? 'facile' : 'normale') + ' joue CORAIL.');
+  showToast(T('t_ia_start', { lvl: T(IA_LVL === 'facile' ? 't_ia_easy' : 't_ia_normal') }));
   tourHumainIA();
 }
 
@@ -1612,9 +1956,9 @@ function envoyer(msg){
   if (!NET.conn) return;
   try {
     NET.conn.send(msg).catch(function(err){
-      if (netFatal(err)) salonPerdu('L\u2019envoi vers le salon a échoué.');
+      if (netFatal(err)) salonPerdu('net_lost_send');
       else if (msg && msg.type === 'action'){
-        showToast('Envoi du coup échoué — réessaie.');
+        showToast(T('net_move_failed'));
         if (G.phase === 'playing' && G.turn === 'corail' && NET.role === 'corail') UI.uiLock = false;
       }
     });
@@ -1630,7 +1974,7 @@ function lectureRapide(){
     ((batch && batch.messages) || []).forEach(surMessageSalon);
   }).catch(function(err){
     NET.fastBusy = false;
-    if (netFatal(err)) salonPerdu('La lecture du salon a échoué.');
+    if (netFatal(err)) salonPerdu('net_lost_read');
   });
 }
 function demarrerLectureRapide(){
@@ -1657,7 +2001,7 @@ function surMessageSalon(msg){
     else if (m.type === 'refus'){ if (NET.role === 'corail' && m.de === NET.partenaire) surRefus(m); }
     else if (m.type === 'fin'){ if (NET.role === 'corail' && m.de === NET.partenaire) surFin(m); }
     else if (m.type === 'quit'){
-      if (NET.partenaire && m.de === NET.partenaire) salonPerdu('L\u2019adversaire a quitté le salon.');
+      if (NET.partenaire && m.de === NET.partenaire) salonPerdu('net_lost_quit');
     }
   } catch(e){ /* ne jamais casser la boucle d'abonnement */
     if (typeof globalThis !== 'undefined') globalThis.__BRUME_SALON_ERR = String((e && e.stack) || e);
@@ -1683,7 +2027,7 @@ function tentativeEnLigne(){
   MODE = 'enligne';
   NET = netVierge();
   el.lobby.classList.remove('hidden');
-  lobbyMsg('Connexion au salon LOB7…');
+  lobbyMsg('lob_connecting');
   var sdk = globalThis.LOB7Rooms;
   if (!sdk || typeof sdk.connect !== 'function'){ echecEnLigne(); return; }
   sdk.connect().then(function(conn){
@@ -1696,14 +2040,14 @@ function tentativeEnLigne(){
     try {
       NET.stopSub = conn.subscribe(surMessageSalon, {
         after: 0,
-        onError: function(err){ if (netFatal(err)) salonPerdu('Le salon LOB7 s\u2019est fermé.'); }
+        onError: function(err){ if (netFatal(err)) salonPerdu('net_lost_closed'); }
       });
-    } catch(e){ salonPerdu('Impossible de suivre le salon.'); return; }
+    } catch(e){ salonPerdu('net_lost_sub'); return; }
     demarrerLectureRapide();
-    lobbyMsg('Salon rejoint. En attente du second joueur…');
+    lobbyMsg('lob_joined');
     setTimeout(function(){
       if (MODE === 'enligne' && !NET.partenaire){
-        lobbyMsg('En attente du second joueur… Ouvre ce même salon dans un second lecteur LOB7.');
+        lobbyMsg('lob_wait2');
         lectureRapide();
       }
     }, 8000);
@@ -1718,10 +2062,13 @@ function echecEnLigne(){
   el.lobby.classList.add('hidden');
   el.perdue.classList.add('hidden');
   el.accueil.classList.remove('hidden');
-  el.accueilMsg.textContent = 'Le mode en ligne nécessite lob7.com — choisis un autre mode.';
+  el.accueilMsg.textContent = T('net_need_lob7');
   el.accueilMsg.classList.remove('hidden');
 }
-function lobbyMsg(t){ el.lobbyMsg.textContent = t; }
+function lobbyMsg(key, params){
+  LOBBY_MSG.key = key; LOBBY_MSG.params = params || null;
+  if (el.lobbyMsg) el.lobbyMsg.textContent = T(key, params);
+}
 
 function lancerPartieEnLigne(){
   el.accueil.classList.add('hidden');
@@ -1731,13 +2078,13 @@ function lancerPartieEnLigne(){
   resetUIState();
   if (NET.role === 'azur'){
     G = newGame();
-    showToast('Tu es AZUR — hôte et arbitre de la partie. À toi de jouer.');
+    showToast(T('net_role_azur'));
     onlineAvance(null, null);
   } else {
     G = newGame();
     UI.uiLock = true;
     el.lobby.classList.remove('hidden');
-    lobbyMsg('Tu es CORAIL — en attente de la vue de l\u2019hôte (Azur)…');
+    lobbyMsg('net_role_corail');
   }
 }
 
@@ -1814,7 +2161,7 @@ function onlineAvance(resDernier, mover){
   envoyerVueCorail(evs, dernierEnc(resDernier, mover), null);
   if (G.turn === 'corail'){
     UI.uiLock = true; UI.selected = null; UI.targets = [];
-    showToast('Au tour de Corail — attente de son coup…');
+    showToast(T('net_turn_corail'));
   } else {
     UI.uiLock = false;
   }
@@ -1828,17 +2175,17 @@ function surAction(m){
   }
   NET.clesTraitees[m.cle] = true;
   if (G.phase !== 'playing' || G.turn !== 'corail'){
-    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'ce n\u2019est pas le tour de Corail' });
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'not-turn' });
     return;
   }
   var piece = pieceById(G, m.coup.i);
   if (!piece || !piece.alive || piece.player !== 'corail'){
-    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'pièce inconnue' });
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'piece' });
     return;
   }
   var res = attemptMove(G, piece.id, m.coup.q, m.coup.r);
   if (!res.ok){
-    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'coup illégal (' + res.reason + ')' });
+    envoyer({ type:'refus', de: NET.clientId, cle: m.cle, raison: 'illegal (' + res.reason + ')' });
     return;
   }
   animerEtContinuer(res, piece);   // animations filtrées par la vue d'Azur, puis onlineAvance
@@ -1852,7 +2199,7 @@ function surVue(m){
   if (pl.pid !== NET.pid){
     NET.pid = pl.pid;
     resetUIState();
-    showToast('La partie en ligne commence !');
+    showToast(T('net_start'));
   }
   var pieces = [], vus = {};
   (pl.pieces || []).forEach(function(o){
@@ -1888,16 +2235,16 @@ function toastEventEncode(ev){
   var t = ev[0];
   if (t === 'ecl'){
     UI.effects.push({ type:'flash', start: nowSec(), dur:.9 });
-    showToast('Éclair ! Les pièces ennemies sont révélées pour ce tour.', 'eclair');
+    showToast(T('t_eclair'), 'eclair');
   }
-  else if (t === 'perte') showToast('Ton ' + (NOM_TYPE[ev[1]] || 'pièce').toLowerCase() + ' a été capturé !', 'surprise');
-  else if (t === 'pass') showToast(NOM_J[ev[1]] + ' n\u2019a aucun coup légal : tour passé automatiquement.');
-  else if (t === 'surprise'){ showToast('Capture surprise !', 'surprise'); showToast(NOM_TYPE[ev[1]] + ' ' + NOM_J[ev[2]] + ' capturé.'); }
-  else if (t === 'capture') showToast(NOM_TYPE[ev[1]] + ' ' + NOM_J[ev[2]] + ' capturé.');
-  else if (t === 'phare') showToast('Le Phare ' + NOM_J[ev[1]] + ' est tombé !', 'eclair');
+  else if (t === 'perte') showToast(T('t_perte', { piece: pieceName(ev[1]) }), 'surprise');
+  else if (t === 'pass') showToast(T('t_pass', { name: NOM_J[ev[1]] }));
+  else if (t === 'surprise'){ showToast(T('t_surprise'), 'surprise'); showToast(T('t_capture', { piece: pieceName(ev[1]), owner: NOM_J[ev[2]] })); }
+  else if (t === 'capture') showToast(T('t_capture', { piece: pieceName(ev[1]), owner: NOM_J[ev[2]] }));
+  else if (t === 'phare') showToast(T('t_phare_fall', { name: NOM_J[ev[1]] }), 'eclair');
 }
 function surRefus(m){
-  showToast('Coup refusé par l\u2019hôte : ' + (m.raison || 'raison inconnue') + ' — rejoue.');
+  showToast(T('net_refused', { r: reasonText(m.raison) }));
   if (G.phase === 'playing' && G.turn === 'corail') UI.uiLock = false;
 }
 function surFin(m){
@@ -1912,15 +2259,16 @@ function netEnvoyerCoup(piece, q, r){
   NET.cleSeq++;
   var cle = NET.clientId.slice(0, 8) + '-' + NET.cleSeq;
   UI.uiLock = true; UI.selected = null; UI.targets = [];
-  showToast('Coup transmis — validation par l\u2019hôte…');
+  showToast(T('net_move_sent'));
   envoyer({ type:'action', de: NET.clientId, cle: cle, coup: { i: piece.id, q: q, r: r } });
 }
-function salonPerdu(message){
+function salonPerdu(key, params){
   if (MODE !== 'enligne' || !NET.conn) return;
   arreterLectureRapide();
   if (NET.stopSub){ try { NET.stopSub(); } catch(e){} NET.stopSub = null; }
   NET.conn = null;
-  el.perdueMsg.textContent = message || 'Le salon LOB7 n\u2019est plus disponible.';
+  PERDUE_MSG.key = key || 'lost_default'; PERDUE_MSG.params = params || null;
+  el.perdueMsg.textContent = T(PERDUE_MSG.key, PERDUE_MSG.params);
   el.perdue.classList.remove('hidden');
 }
 function quitterSalon(){
@@ -1930,7 +2278,6 @@ function quitterSalon(){
   NET = netVierge();
   MODE = 'accueil';
   el.accueilMsg.classList.add('hidden');
-  el.niveaux.classList.add('hidden');
   resetUIState();
   G = newGame();
   el.accueil.classList.remove('hidden');
@@ -1945,7 +2292,7 @@ function relancer(){
       resetUIState();
       G = newGame();
       onlineAvance(null, null);
-    } else showToast('En ligne, seul l\u2019hôte (Azur) peut relancer une partie.');
+    } else showToast(T('net_only_host'));
     return;
   }
   newPartie();
@@ -1959,11 +2306,27 @@ function boot(){
   el.eclairIco = grab('eclair-ico'); el.eclairInfo = grab('eclair-info'); el.eclairbar = grab('eclairbar');
   el.toasts = grab('toasts');
   el.handoff = grab('handoff'); el.handoffPlayer = grab('handoff-player'); el.handoffNote = grab('handoff-note');
+  el.handoffSmall = grab('handoff-small'); el.handoffPulse = grab('handoff-pulse');
   el.victory = grab('victory'); el.vicTitle = grab('vic-title'); el.vicSub = grab('vic-sub');
+  el.vicOver = grab('vic-over');
+  el.btnReplay = grab('btn-replay'); el.btnInspect = grab('btn-inspect');
+  el.rules = grab('rules'); el.rulesTitle = grab('rules-title'); el.rulesBody = grab('rules-body');
+  el.btnRulesClose = grab('btn-rules-close');
   el.accueil = grab('accueil'); el.accueilMsg = grab('accueil-msg');
   el.lobby = grab('lobby'); el.lobbyMsg = grab('lobby-msg');
   el.perdue = grab('perdue'); el.perdueMsg = grab('perdue-msg');
-  el.niveaux = grab('niveaux'); el.btnLeave = grab('btn-leave');
+  el.btnLeave = grab('btn-leave');
+  el.brandSub = grab('brand-sub'); el.btnLang = grab('btn-lang'); el.btnLangAcc = grab('btn-lang-acc');
+  el.btnNew = grab('btn-new'); el.btnRules = grab('btn-rules');
+  el.accKicker = grab('acc-kicker'); el.accSub = grab('acc-sub');
+  el.mIaTitle = grab('m-ia-title'); el.mIaDesc = grab('m-ia-desc');
+  el.mHotseatTxt = grab('m-hotseat-txt'); el.mHotseatDesc = grab('m-hotseat-desc');
+  el.mOnlineTxt = grab('m-online-txt'); el.mOnlineDesc = grab('m-online-desc');
+  el.mIaFacile = grab('m-ia-facile'); el.mIaNormal = grab('m-ia-normal');
+  el.accRulesBtn = grab('btn-accueil-rules');
+  el.lobKicker = grab('lob-kicker'); el.lobTitle = grab('lob-title'); el.lobKeep = grab('lob-keep');
+  el.btnLobbyCancel = grab('btn-lobby-cancel');
+  el.perdueKicker = grab('perdue-kicker'); el.perdueTitle = grab('perdue-title'); el.perdueBack = grab('btn-perdue-retour');
 
   cv.addEventListener('click', function(ev){
     var r = cv.getBoundingClientRect();
@@ -1980,31 +2343,36 @@ function boot(){
     if (ev.key === 'Enter' && MODE === 'hotseat' && G.phase === 'handoff') advanceHandoff();
     if (ev.key === 'Escape') el.rules.classList.add('hidden');
   });
-  grab('btn-new').addEventListener('click', relancer);
-  grab('btn-replay').addEventListener('click', relancer);
-  grab('btn-inspect').addEventListener('click', function(){ el.victory.classList.add('hidden'); });
-  grab('btn-rules').addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
-  grab('btn-rules-close').addEventListener('click', function(){ el.rules.classList.add('hidden'); });
-  el.rules = grab('rules');
+  el.btnNew.addEventListener('click', relancer);
+  el.btnReplay.addEventListener('click', relancer);
+  el.btnInspect.addEventListener('click', function(){ el.victory.classList.add('hidden'); });
+  el.btnRules.addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
+  el.btnRulesClose.addEventListener('click', function(){ el.rules.classList.add('hidden'); });
+
+  el.btnLang.addEventListener('click', function(){ setLang(LANG === 'en' ? 'fr' : 'en'); });
+  el.btnLangAcc.addEventListener('click', function(){ setLang(LANG === 'en' ? 'fr' : 'en'); });
 
   grab('m-hotseat').addEventListener('click', function(){
     MODE = 'hotseat';
-    el.niveaux.classList.add('hidden');
     el.accueil.classList.add('hidden');
     newPartie();
   });
-  grab('m-ia').addEventListener('click', function(){ el.niveaux.classList.toggle('hidden'); });
-  grab('m-ia-facile').addEventListener('click', function(){ demarrerIA('facile'); });
-  grab('m-ia-normal').addEventListener('click', function(){ demarrerIA('normal'); });
+  /* Bouton central de l'accueil : un simple clic au centre de l'écran
+     démarre une partie contre l'IA (niveau Normal), sans autre interaction. */
+  grab('m-ia').addEventListener('click', function(){ demarrerIA('normal'); });
+  el.mIaFacile.addEventListener('click', function(){ demarrerIA('facile'); });
+  el.mIaNormal.addEventListener('click', function(){ demarrerIA('normal'); });
   grab('m-online').addEventListener('click', tentativeEnLigne);
-  grab('btn-accueil-rules').addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
-  grab('btn-lobby-cancel').addEventListener('click', quitterSalon);
-  grab('btn-perdue-retour').addEventListener('click', quitterSalon);
+  el.accRulesBtn.addEventListener('click', function(){ el.rules.classList.remove('hidden'); });
+  el.btnLobbyCancel.addEventListener('click', quitterSalon);
+  el.perdueBack.addEventListener('click', quitterSalon);
   el.btnLeave.addEventListener('click', quitterSalon);
 
   window.addEventListener('resize', resize);
   Assets.init();
   resize();
+  LANG = langLoad();      // défaut anglais, choix persisté (sessionStorage, échec silencieux)
+  applyLang();
   requestAnimationFrame(frame);   // l'accueil attend le choix du mode : pas de newPartie() ici
 }
 
